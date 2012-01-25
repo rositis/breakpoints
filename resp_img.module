@@ -1,0 +1,185 @@
+<?php
+
+/**
+ * @file resp_img.module
+ */
+
+define('RESP_IMG_COOKIE', 'Drupal_visitor_ri_cookie');
+
+/**
+ * Implements hook_ctools_plugin_directory()
+ */
+function resp_img_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && $plugin == 'export_ui') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function resp_img_menu() {
+  $items = array();
+
+  $items['admin/config/media/resp_img/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Responsive images settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('resp_img_admin_settings'),
+    'access arguments' => array('administer image styles'),
+    'file' => 'resp_img.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+* Load a single suffix
+*/
+function resp_img_suffix_load($name) {
+  ctools_include('export');
+  $result = ctools_export_load_object('resp_img_suffix', 'names', array($name));
+  if (isset($result[$name])) {
+    return $result[$name];
+  }
+}
+
+/**
+ * Load all suffixes
+ */
+function resp_img_suffix_load_all() {
+  ctools_include('export');
+  return ctools_export_load_object('resp_img_suffix');
+}
+
+/**
+* Save a single suffix
+*/
+function resp_img_suffix_save(&$resp_img_suffix) {
+  $update = (isset($resp_img_suffix->id) && is_numeric($resp_img_suffix->id)) ? array('id') : array();
+  return drupal_write_record('resp_img_suffixs', $resp_img_suffix, $update);
+}
+
+/**
+ * Load suffix and breakpoint for all suffixes
+ */
+function resp_img_suffix_load_all_breakpoints() {
+  static $widths = array();
+  if (empty($widths)) {
+    $suffixes = resp_img_suffix_load_all();
+    foreach ($suffixes as $suffix) {
+      $widths[$suffix->suffix] = $suffix->breakpoint;
+    }
+    arsort($widths);
+  }
+  return $widths;
+}
+
+/**
+ * Add cookie support, script and settings
+ */
+function resp_img_add_js() {
+  static $added = FALSE;
+  if (!$added) {
+    $added = TRUE;
+    $settings = array();
+    $settings['default_suffix'] = variable_get('resp_img_default_suffix', '');
+    $settings['current_suffix'] = resp_img_get_best_suffix();
+    $settings['suffixes'] = resp_img_suffix_load_all_breakpoints();
+    drupal_add_library('system', 'jquery.cookie');
+    drupal_add_js(array('respImg' => $settings), array('type' => 'setting', 'scope' => JS_DEFAULT));
+    drupal_add_js(drupal_get_path('module', 'resp_img') . '/resp_img.js');
+  }
+}
+
+/**
+ * Replace suffix if needed / possible
+ */
+function resp_img_replace_suffix($path) {
+  $bestfit_suffix = resp_img_get_best_suffix();
+  $default_suffix = variable_get('resp_img_default_suffix', '');
+
+  if (isset($bestfit_suffix) && !empty($bestfit_suffix) && $bestfit_suffix != $default_suffix) {
+    $path = str_replace($default_suffix, $bestfit_suffix, $path);
+  }
+  return $path;
+}
+
+/**
+ * Determine best match
+ */
+function resp_img_get_best_suffix() {
+  static $bestfit = FALSE;
+  if (FALSE && $bestfit === FALSE && isset($_COOKIE[RESP_IMG_COOKIE]) && is_numeric($_COOKIE[RESP_IMG_COOKIE])) {
+    $width = $_COOKIE[RESP_IMG_COOKIE];
+    $bestfit = variable_get('resp_img_default_suffix', '');
+    $widths = resp_img_suffix_load_all_breakpoints();
+    foreach ($widths as $k => $v) {
+      if ($width >= $v) {
+        $bestfit = $k;
+        continue;
+      }
+    }
+  }
+  return $bestfit;
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function resp_img_theme_registry_alter(&$theme_registry) {
+  foreach ($theme_registry as $key => $info) {
+    if ($key == 'image') {
+      if (isset($theme_registry[$key]['preprocess functions']) && is_array($theme_registry[$key]['preprocess functions'])) {
+        array_unshift($theme_registry[$key]['preprocess functions'], 'resp_img_pp_image');
+      } else {
+        $theme_registry[$key]['preprocess functions'] = array('resp_img_pp_image');
+      }
+    }
+    if ($key == 'field_slideshow') {
+      if (isset($theme_registry[$key]['preprocess functions']) && is_array($theme_registry[$key]['preprocess functions'])) {
+        array_unshift($theme_registry[$key]['preprocess functions'], 'resp_img_pp_field_slideshow');
+      } else {
+        $theme_registry[$key]['preprocess functions'] = array('resp_img_pp_field_slideshow');
+      }
+    }
+  }
+}
+
+/**
+ * Support for field_slideshow.
+ */
+function resp_img_pp_field_slideshow(&$variables) {
+  resp_img_add_js();
+  
+  $variables['image_style'] = resp_img_replace_suffix($variables['image_style']);
+  foreach ($variables['items'] as $key => $item) {
+    $variables['items'][$key]['path']['path'] = resp_img_replace_suffix($variables['items'][$key]['path']['path']);
+  }
+}
+
+/**
+ * Support for general images.
+ */
+function resp_img_pp_image(&$variables) {
+  foreach (array('width', 'height') as $key) {
+    if (isset($variables[$key])) {
+      unset($variables[$key]);
+    }
+  }
+}
+
+/**
+ * Alter all links for things like colorbox.
+ */
+function resp_img_url_outbound_alter(&$path, &$options, $original_path) {
+  $path = resp_img_replace_suffix($path);
+}
+
+/**
+ * Alter all image sources.
+ */
+function resp_img_file_url_alter(&$uri) {
+  $uri = resp_img_replace_suffix($uri);
+}

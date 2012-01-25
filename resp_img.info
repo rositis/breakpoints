@@ -1,0 +1,4 @@
+name = Resp Img
+description = Responsive images
+core = 7.x
+files[] = resp_img.module
