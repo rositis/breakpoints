@@ -111,14 +111,14 @@ function resp_img_replace_suffix($path) {
  */
 function resp_img_get_best_suffix() {
   static $bestfit = FALSE;
-  if (FALSE && $bestfit === FALSE && isset($_COOKIE[RESP_IMG_COOKIE]) && is_numeric($_COOKIE[RESP_IMG_COOKIE])) {
+  if ($bestfit === FALSE && isset($_COOKIE[RESP_IMG_COOKIE]) && is_numeric($_COOKIE[RESP_IMG_COOKIE])) {
     $width = $_COOKIE[RESP_IMG_COOKIE];
     $bestfit = variable_get('resp_img_default_suffix', '');
     $widths = resp_img_suffix_load_all_breakpoints();
     foreach ($widths as $k => $v) {
       if ($width >= $v) {
         $bestfit = $k;
-        continue;
+        break;
       }
     }
   }
