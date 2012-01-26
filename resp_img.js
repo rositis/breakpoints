@@ -38,6 +38,8 @@
           var img = $(this);
           var src = img.attr('src').replace(current_suffix, suffix);
           img.attr('src', src);
+          img.removeAttr('width');
+          img.removeAttr('height');
         });
         $('a.colorbox').each(function() {
           var a = $(this);
