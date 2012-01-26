@@ -38,7 +38,7 @@
       if ($.cookie('respimg_test') === 'ok') {
         $.cookie('respimg_test', null);
         var suffix = Drupal.respImg_getOptimalSuffix();
-        location.reload(true);
+        location.replace(location.href);
       }
     }
     
@@ -52,7 +52,8 @@
     var suffix = Drupal.respImg_getOptimalSuffix();
     
     if (Drupal.settings.respImg.reloadOnResize && suffix !== '' && suffix !== current_suffix) {
-      location.reload(true);
+      setTimeout(function() {location.reload(true)}, 100);
+      return;
     }
     
     if (Drupal.settings.respImg.forceResize && suffix !== '' && suffix !== current_suffix) {
