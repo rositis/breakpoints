@@ -3,9 +3,9 @@
 /**
  * @file resp_img.module
  */
-
-define('RESP_IMG_COOKIE', 'Drupal_visitor_ri_cookie');
-
+if (!defined('RESP_IMG_COOKIE')) {
+  define('RESP_IMG_COOKIE', 'Drupal_visitor_ri_cookie');
+}
 /**
  * Implements hook_ctools_plugin_directory()
  */
@@ -14,6 +14,32 @@ function resp_img_ctools_plugin_directory($module, $plugin) {
     return 'plugins/' . $plugin;
   }
 }
+
+/**
+ * Implements hook_enable().
+ */
+function resp_img_enable() {
+  $cache_class_cache_page = variable_get('cache_class_cache_page');
+  if (!empty($cache_class_cache_page)) {
+    variable_set('resp_img_cache_class_cache_page_old', $cache_class_cache_page);
+  }
+  variable_set('cache_class_cache_page', 'RespImgPageCache');
+}
+
+/**
+ * Implements hook_disable().
+ */
+function resp_img_disable() {
+  $cache_class_cache_page_old = variable_get('resp_img_cache_class_cache_page_old');
+  if (isset($cache_class_cache_page_old)) {
+    variable_set('cache_class_cache_page', $cache_class_cache_page_old);
+  }
+  else {
+    variable_del('cache_class_cache_page');
+  }
+  variable_del('resp_img_cache_class_cache_page_old');
+}
+
 
 /**
  * Implements hook_menu().
