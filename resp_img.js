@@ -20,6 +20,14 @@
       $.each(Drupal.settings.respImg.suffixes, function(index, value){
         if (value <= $(window).width()) {
           suffix = index;
+          $.cookie(
+            "Drupal.visitor.ri_cookie",
+            value,
+            {
+              path: Drupal.settings.basePath,
+              expires: 1
+            }
+          );
           //return false in jQuery.each() equals 'break;' in a traditional loop
           return false;
         }
@@ -39,14 +47,5 @@
         Drupal.settings.respImg.current_suffix = suffix;
       }
     }
-    
-    $.cookie(
-      "Drupal.visitor.ri_cookie",
-      $(window).width(),
-      {
-        path: Drupal.settings.basePath,
-        expires: 1
-      }
-    );
   }  
 } (jQuery));

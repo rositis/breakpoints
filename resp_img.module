@@ -69,8 +69,9 @@ function resp_img_suffix_load_all_breakpoints() {
   if (empty($widths)) {
     $suffixes = resp_img_suffix_load_all();
     foreach ($suffixes as $suffix) {
-      $widths[$suffix->suffix] = $suffix->breakpoint;
+      $widths[$suffix->suffix] = (int)$suffix->breakpoint;
     }
+    $widths[variable_get('resp_img_default_suffix', '')] = 1;
     arsort($widths);
   }
   return $widths;
@@ -88,8 +89,8 @@ function resp_img_add_js() {
     $settings['current_suffix'] = resp_img_get_best_suffix();
     $settings['suffixes'] = resp_img_suffix_load_all_breakpoints();
     drupal_add_library('system', 'jquery.cookie');
-    drupal_add_js(array('respImg' => $settings), array('type' => 'setting', 'scope' => JS_DEFAULT));
-    drupal_add_js(drupal_get_path('module', 'resp_img') . '/resp_img.js');
+    drupal_add_js(array('respImg' => $settings), array('type' => 'setting', 'weight' => -11, 'group' => JS_DEFAULT));
+    drupal_add_js(drupal_get_path('module', 'resp_img') . '/resp_img.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
   }
 }
 
