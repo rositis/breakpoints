@@ -9,31 +9,46 @@
     }
   }
   
+  Drupal.respImg_getOptimalSuffix = function() {
+    var suffix = '';
+    $.each(Drupal.settings.respImg.suffixes, function(index, value){
+      if (value <= $(window).width()) {
+        suffix = index;
+        // set cookie with new width
+        $.cookie(
+          "respimg",
+          value,
+          {
+            path: Drupal.settings.basePath,
+            expires: 1
+          }
+        );
+        return false;
+      }
+    });
+    return suffix;
+  }
+  
   Drupal.respImg_processSuffixes = function() {
+    if (Drupal.settings.respImg.current_suffix === false && Drupal.settings.respImg.forceRedirect) {
+      // Make sure browser accepts cookies
+      $.cookie('respimg_test', 'ok');
+      if ($.cookie('respimg_test') === 'ok') {
+        $.cookie('respimg_test', null);
+        var suffix = Drupal.respImg_getOptimalSuffix();
+        location.reload(true);
+      }
+    }
+    
     if (true || Drupal.settings.respImg.current_suffix === false || $.cookie("respimg") === null) {
       var current_suffix = Drupal.settings.respImg.current_suffix;
       if (Drupal.settings.respImg.current_suffix === false) {
         current_suffix = Drupal.settings.respImg.default_suffix;
       }
       
-      var suffix = '';
-      $.each(Drupal.settings.respImg.suffixes, function(index, value){
-        if (value <= $(window).width()) {
-          suffix = index;
-          // set cookie with new width
-          $.cookie(
-            "respimg",
-            value,
-            {
-              path: Drupal.settings.basePath,
-              expires: 1
-            }
-          );
-          return false;
-        }
-      });
+      var suffix = Drupal.respImg_getOptimalSuffix();
       
-      if (suffix !== '' && suffix !== current_suffix) {
+      if (Drupal.settings.respImg.forceResize && suffix !== '' && suffix !== current_suffix) {
         // support for images
         $('img').each(function() {
           var img = $(this);
@@ -68,10 +83,10 @@
           $('div.field-slideshow-slide').css('width', '').css('height', '');
           Drupal.behaviors.field_slideshow.attach();
         }
-        
-        // store last used suffix
-        Drupal.settings.respImg.current_suffix = suffix;
       }
+      
+      // store last used suffix
+      Drupal.settings.respImg.current_suffix = suffix;
     }
   }  
 } (jQuery));

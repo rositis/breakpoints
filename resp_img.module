@@ -113,6 +113,8 @@ function resp_img_add_js() {
     $settings = array();
     $settings['default_suffix'] = variable_get('resp_img_default_suffix', '');
     $settings['current_suffix'] = resp_img_get_best_suffix();
+    $settings['forceRedirect'] = variable_get('resp_img_forceredirect', FALSE);
+    $settings['forceResize'] = variable_get('resp_img_forceresize', FALSE);
     $settings['suffixes'] = resp_img_suffix_load_all_breakpoints();
     drupal_add_library('system', 'jquery.cookie');
     drupal_add_js(array('respImg' => $settings), array('type' => 'setting', 'weight' => -11, 'group' => JS_DEFAULT));
