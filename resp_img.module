@@ -4,7 +4,7 @@
  * @file resp_img.module
  */
 if (!defined('RESP_IMG_COOKIE')) {
-  define('RESP_IMG_COOKIE', 'Drupal_visitor_ri_cookie');
+  define('RESP_IMG_COOKIE', 'respimg');
 }
 /**
  * Implements hook_ctools_plugin_directory()

@@ -10,7 +10,7 @@
   }
   
   Drupal.respImg_processSuffixes = function() {
-    if (true || Drupal.settings.respImg.current_suffix === false || $.cookie("Drupal.visitor.ri_cookie") === null) {
+    if (true || Drupal.settings.respImg.current_suffix === false || $.cookie("respimg") === null) {
       var current_suffix = Drupal.settings.respImg.current_suffix;
       if (Drupal.settings.respImg.current_suffix === false) {
         current_suffix = Drupal.settings.respImg.default_suffix;
@@ -21,7 +21,7 @@
         if (value <= $(window).width()) {
           suffix = index;
           $.cookie(
-            "Drupal.visitor.ri_cookie",
+            "respimg",
             value,
             {
               path: Drupal.settings.basePath,

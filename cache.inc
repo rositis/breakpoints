@@ -1,6 +1,6 @@
 <?php
 if (!defined('RESP_IMG_COOKIE')) {
-  define('RESP_IMG_COOKIE', 'Drupal_visitor_ri_cookie');
+  define('RESP_IMG_COOKIE', 'respimg');
 }
 
 class RespImgPageCache extends DrupalDatabaseCache {
