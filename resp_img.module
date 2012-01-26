@@ -49,7 +49,7 @@ function resp_img_menu() {
 
   $items['admin/config/media/resp_img/settings'] = array(
     'title' => 'Settings',
-    'description' => 'Responsive images settings',
+    'description' => 'Responsive images and styles',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('resp_img_admin_settings'),
     'access arguments' => array('administer image styles'),

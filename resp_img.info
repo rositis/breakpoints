@@ -1,5 +1,5 @@
-name = Resp Img
-description = Responsive images
+name = Responsive images and styles
+description = Responsive images and styles
 core = 7.x
 files[] = resp_img.module
 files[] = cache.inc
