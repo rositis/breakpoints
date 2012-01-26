@@ -35,6 +35,15 @@ function resp_img_admin_settings() {
     '#options' => array(0 => t('No'), 1 => ('Yes'),),
   );
 
+  $form['resp_img_reloadonresize'] = array(
+    '#type' => 'select',
+    '#title' => t('Reload on resize'),
+    '#description' => t('Reload the page when browser windows resizes.'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('resp_img_reloadonresize', FALSE),
+    '#options' => array(0 => t('No'), 1 => ('Yes'),),
+  );
+
   return system_settings_form($form);
 }
 
