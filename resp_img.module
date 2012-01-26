@@ -154,9 +154,13 @@ function resp_img_theme_registry_alter(&$theme_registry) {
 function resp_img_pp_field_slideshow(&$variables) {
   resp_img_add_js();
   
-  $variables['image_style'] = resp_img_replace_suffix($variables['image_style']);
-  foreach ($variables['items'] as $key => $item) {
-    $variables['items'][$key]['path']['path'] = resp_img_replace_suffix($variables['items'][$key]['path']['path']);
+  if (isset($variables['image_style'])) {
+    $variables['image_style'] = resp_img_replace_suffix($variables['image_style']);
+  }
+  if (isset($variables['items']) && is_array($variables['items'])) {
+    foreach ($variables['items'] as $key => $item) {
+      $variables['items'][$key]['path']['path'] = resp_img_replace_suffix($variables['items'][$key]['path']['path']);
+    }
   }
 }
 
@@ -164,9 +168,12 @@ function resp_img_pp_field_slideshow(&$variables) {
  * Support for general images.
  */
 function resp_img_pp_image(&$variables) {
-  foreach (array('width', 'height') as $key) {
-    if (isset($variables[$key])) {
-      unset($variables[$key]);
+  if (isset($variables['style_name']) && $variables['style_name'] != resp_img_replace_suffix($variables['style_name'])) {
+    $variables['style_name'] = resp_img_replace_suffix($variables['style_name']);
+    foreach (array('width', 'height') as $key) {
+      if (isset($variables[$key])) {
+        unset($variables[$key]);
+      }
     }
   }
 }
