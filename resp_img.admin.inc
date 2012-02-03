@@ -44,6 +44,15 @@ function resp_img_admin_settings() {
     '#options' => array(0 => t('No'), 1 => ('Yes'),),
   );
 
+  $form['resp_img_purgeexpire'] = array(
+    '#type' => 'select',
+    '#title' => t('Advanced support for purge/expire'),
+    '#description' => t('Clear all variants using purge/expire modules.'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('resp_img_purgeexpire', FALSE),
+    '#options' => array(0 => t('No'), 1 => ('Yes'),),
+  );
+
   return system_settings_form($form);
 }
 
