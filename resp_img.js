@@ -32,7 +32,7 @@
   
   Drupal.respImg_processSuffixes = function() {
     // Redirect user if needed / wanted
-    if (Drupal.settings.respImg.current_suffix === false && Drupal.settings.respImg.forceRedirect) {
+    if (Drupal.settings.respImg.current_suffix === false && Drupal.settings.respImg.forceRedirect == "1") {
       // Make sure browser accepts cookies
       $.cookie('respimg_test', 'ok');
       if ($.cookie('respimg_test') === 'ok') {
@@ -51,12 +51,12 @@
     // get optimal suffix
     var suffix = Drupal.respImg_getOptimalSuffix();
     
-    if (Drupal.settings.respImg.reloadOnResize && suffix !== '' && suffix !== current_suffix) {
+    if (Drupal.settings.respImg.reloadOnResize == "1" && suffix !== '' && suffix !== current_suffix) {
       setTimeout(function() {location.reload(true)}, 100);
       return;
     }
     
-    if (Drupal.settings.respImg.forceResize && suffix !== '' && suffix !== current_suffix) {
+    if (Drupal.settings.respImg.forceResize == "1" && suffix !== '' && suffix !== current_suffix) {
       // support for images
       $('img').each(function() {
         var img = $(this);
