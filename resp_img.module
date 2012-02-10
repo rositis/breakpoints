@@ -16,6 +16,13 @@ function resp_img_ctools_plugin_directory($module, $plugin) {
 }
 
 /**
+ * Implements hook_init().
+ */
+function resp_img_init() {
+  resp_img_add_js();
+}
+
+/**
  * Implements hook_enable().
  */
 function resp_img_enable() {
@@ -198,8 +205,10 @@ function resp_img_pp_field_slideshow(&$variables) {
  * Support for general images.
  */
 function resp_img_pp_image(&$variables) {
+  resp_img_add_js();
   if (isset($variables['style_name']) && $variables['style_name'] != resp_img_replace_suffix($variables['style_name'])) {
     $variables['style_name'] = resp_img_replace_suffix($variables['style_name']);
+    $variables['path'] = resp_img_replace_suffix($variables['path']);
     foreach (array('width', 'height') as $key) {
       if (isset($variables[$key])) {
         unset($variables[$key]);
