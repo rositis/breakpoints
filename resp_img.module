@@ -221,7 +221,9 @@ function resp_img_pp_image(&$variables) {
  * Alter all links for things like colorbox.
  */
 function resp_img_url_outbound_alter(&$path, &$options, $original_path) {
-  $path = resp_img_replace_suffix($path);
+  if (!preg_match('|^/?admin/|',$path)) {
+    $path = resp_img_replace_suffix($path);
+  }
 }
 
 /**
