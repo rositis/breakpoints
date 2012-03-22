@@ -6,6 +6,7 @@
 if (!defined('RESP_IMG_COOKIE')) {
   define('RESP_IMG_COOKIE', 'respimg');
 }
+
 /**
  * Implements hook_ctools_plugin_directory()
  */
@@ -20,6 +21,10 @@ function resp_img_ctools_plugin_directory($module, $plugin) {
  */
 function resp_img_init() {
   resp_img_add_js();
+  $plugin = context_get_plugin('condition', 'resp_img_context_condition_suffix');
+  if ($plugin) {
+    $plugin->execute(resp_img_get_best_suffix());
+  }
 }
 
 /**
@@ -268,4 +273,106 @@ function resp_img_expire_cache_alter (&$expire, $node, &$paths) {
     }
     $expire = array_merge($expire, $extra_paths);
   }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function resp_img_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'field_ui_field_edit_form') {
+    $form['resp_img'] = array(
+      '#title' => t('Responsive images and styles'),
+      '#type' => 'fieldset',
+      '#collapsible' => FALSE,
+    );
+
+    $form['resp_img']['use_for_resp_img'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Apply responsive images and styles to this field'),
+      //variable_get('resp_img_*entitytype*_*bundle*_*fieldname*, 0)
+      '#default_value' => variable_get('resp_img_' . $form['instance']['entity_type']['#value'] . '_' . $form['instance']['bundle']['#value'] . '_' . $form['instance']['field_name']['#value'], 0),
+      '#description' => t('If selected, responsive images and styles will be applied to the content of this field.'),
+    );
+
+    $form['#submit'][] = 'resp_img_add_entity_type_field';
+
+  }
+}
+
+function resp_img_add_entity_type_field($form, &$form_state) {
+  variable_set('resp_img_' . $form['instance']['entity_type']['#value'] . '_' . $form['instance']['bundle']['#value'] . '_' . $form['instance']['field_name']['#value'],  $form_state['values']['use_for_resp_img']);
+}
+
+/**
+ * Implements hook_entity_view_alter().
+ */
+function resp_img_entity_view_alter(&$build, $type) {
+  foreach (element_children($build) as $child) {
+    if (isset($build[$child]['#field_name'])) {
+      if (variable_get('resp_img_' . $build['#entity_type'] . '_' . $build['#bundle'] . '_' . $build[$child]['#field_name'], 0)) {
+        $build[$child]['#post_render'][] = 'resp_img_post_render';
+      }
+    }
+  }
+}
+
+function resp_img_post_render($content, $element) {
+  $result = array();
+  preg_match_all('/<img[^>]+>/i', $content, $result);
+  $orig_imgs = $imgs = $result[0];
+  $sfx = resp_img_suffix_load_all();
+  $suffixes = array();
+  foreach ($sfx as $suffix) {
+    $suffixes[] = $suffix->suffix;
+  }
+  // media caches its file urls, so we need to replace all sufixes to the default suffix,
+  // before finding the best fitting suffix with resp_img_replace_suffix.
+  $imgs = str_replace($suffixes, variable_get('resp_img_default_suffix', ''), $imgs);
+  $new_imgs = preg_replace('/(height|width)=("[^"]*")/i', "", $imgs);
+  foreach ($new_imgs as &$img) {
+    $src = array();
+    preg_match('/src=("[^"]*")/i', $img, $src);
+    $src = $src[1];
+    $new_src = resp_img_replace_suffix($src);
+    $img = str_replace($src, $new_src, $img);
+  }
+  $content = str_replace($orig_imgs, $new_imgs, $content);
+  return $content;
+}
+
+/**
+ * Implements hook_ctools_plugin_api().
+ */
+function resp_img_ctools_plugin_api($owner, $api) {
+  return array('version' => 1);
+}
+
+/**
+ * Implements hook_context_plugins().
+ */
+function resp_img_context_plugins() {
+  $plugins = array();
+  $plugins['resp_img_context_condition_suffix'] = array(
+    'handler' => array(
+      'path' => drupal_get_path('module', 'resp_img') .'/plugins',
+      'file' => 'resp_img_context_condition_suffix.inc',
+      'class' => 'resp_img_context_condition_suffix',
+      'parent' => 'context_condition',
+    ),
+  );
+  return $plugins;
+}
+
+/**
+ * Implements hook_context_registry().
+ */
+function resp_img_context_registry() {
+  return array(
+    'conditions' => array(
+      'resp_img_context_condition_suffix' => array(
+        'title' => t('Responsive Images'),
+        'plugin' => 'resp_img_context_condition_suffix',
+      ),
+    ),
+  );
 }
