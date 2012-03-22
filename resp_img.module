@@ -376,3 +376,11 @@ function resp_img_context_registry() {
     ),
   );
 }
+
+/**
+ * Implements hook_entity_info_alter().
+ */
+function resp_img_entity_info_alter(&$entity_info) {
+  // Support the media module
+  $entity_info['file']['view modes']['media_responsive'] = array('label' => t('Responsive'), 'custom settings' => TRUE);
+}
