@@ -280,21 +280,23 @@ function resp_img_expire_cache_alter (&$expire, $node, &$paths) {
  */
 function resp_img_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'field_ui_field_edit_form') {
-    $form['resp_img'] = array(
-      '#title' => t('Responsive images and styles'),
-      '#type' => 'fieldset',
-      '#collapsible' => FALSE,
-    );
+    if ($form['#instance']['widget']['module'] == 'text') {
+      $form['resp_img'] = array(
+        '#title' => t('Responsive images and styles'),
+        '#type' => 'fieldset',
+        '#collapsible' => FALSE,
+      );
 
-    $form['resp_img']['use_for_resp_img'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Apply responsive images and styles to this field'),
-      //variable_get('resp_img_*entitytype*_*bundle*_*fieldname*, 0)
-      '#default_value' => variable_get('resp_img_' . $form['instance']['entity_type']['#value'] . '_' . $form['instance']['bundle']['#value'] . '_' . $form['instance']['field_name']['#value'], 0),
-      '#description' => t('If selected, responsive images and styles will be applied to the content of this field.'),
-    );
+      $form['resp_img']['use_for_resp_img'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Apply responsive images and styles to this field'),
+        //variable_get('resp_img_*entitytype*_*bundle*_*fieldname*, 0)
+        '#default_value' => variable_get('resp_img_' . $form['instance']['entity_type']['#value'] . '_' . $form['instance']['bundle']['#value'] . '_' . $form['instance']['field_name']['#value'], 0),
+        '#description' => t('If selected, responsive images and styles will be applied to the content of this field.'),
+      );
 
-    $form['#submit'][] = 'resp_img_add_entity_type_field';
+      $form['#submit'][] = 'resp_img_add_entity_type_field';
+    }
 
   }
 }
