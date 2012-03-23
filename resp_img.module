@@ -21,9 +21,11 @@ function resp_img_ctools_plugin_directory($module, $plugin) {
  */
 function resp_img_init() {
   resp_img_add_js();
-  $plugin = context_get_plugin('condition', 'resp_img_context_condition_suffix');
-  if ($plugin) {
-    $plugin->execute(resp_img_get_best_suffix());
+  if (module_exists('context')) {
+    $plugin = context_get_plugin('condition', 'resp_img_context_condition_suffix');
+    if ($plugin) {
+      $plugin->execute(resp_img_get_best_suffix());
+    }
   }
 }
 
