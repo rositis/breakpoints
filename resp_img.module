@@ -321,6 +321,10 @@ function resp_img_entity_view_alter(&$build, $type) {
 }
 
 function resp_img_post_render($content, $element) {
+  return _resp_img_replace($content);
+}
+
+function _resp_img_replace($content) {
   $result = array();
   preg_match_all('/<img[^>]+>/i', $content, $result);
   $orig_imgs = $imgs = $result[0];
@@ -387,4 +391,18 @@ function resp_img_context_registry() {
 function resp_img_entity_info_alter(&$entity_info) {
   // Support the media module
   $entity_info['file']['view modes']['media_responsive'] = array('label' => t('Responsive'), 'custom settings' => TRUE);
+}
+
+/**
+ * Implements hook_block_view_alter().
+ */
+function resp_img_block_view_alter(&$data, $block) {
+  if (variable_get('resp_img_block_enabled', 1) && isset($data['content'])) {
+    if (is_string($data['content'])) {
+      $data['content'] = _resp_img_replace($data['content']);
+    }
+    else {
+      $data['content']['#post_render'][] = 'resp_img_post_render';
+    }
+  }
 }

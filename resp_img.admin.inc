@@ -53,6 +53,13 @@ function resp_img_admin_settings() {
     '#options' => array(0 => t('No'), 1 => ('Yes'),),
   );
 
+  $form['resp_img_block_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable responsive images for blocks.'),
+    '#description' => t('If checked, the images within blocks will be responsive as well.'),
+    '#default_value' => variable_get('resp_img_block_enabled', 1),
+  );
+
   return system_settings_form($form);
 }
 
