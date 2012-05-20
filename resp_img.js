@@ -9,11 +9,25 @@
       });
     }
   }
-  
+
   Drupal.respImg_getOptimalSuffix = function() {
+    // Helper function to calculate width off border and scrollbars
+    function borderAndScroll() {
+      if (typeof borderAndScroll.current == 'undefined' ) {
+        borderAndScroll.current = 0;
+        if (window.innerWidth && window.outerWidth) {
+          borderAndScroll.current = window.outerWidth - window.innerWidth;
+        }
+        else if (document.body.offsetWidth && document.body.clientWidth) {
+          borderAndScroll.current = document.body.offsetWidth - document.body.clientWidth;
+        }
+      }
+      return borderAndScroll.current;
+    }
+
     var suffix = '';
-    $.each(Drupal.settings.respImg.suffixes, function(index, value){
-      if (value <= $(window).width()) {
+    $.each(Drupal.settings.respImg.suffixes, function(index, value) {
+      if ((value - borderAndScroll()) <= $(window).width()) {
         suffix = index;
         // set cookie with new width
         $.cookie(
