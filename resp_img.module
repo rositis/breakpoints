@@ -170,6 +170,8 @@ function resp_img_get_best_suffix() {
   static $bestfit = FALSE;
   if ($bestfit === FALSE && isset($_COOKIE[RESP_IMG_COOKIE]) && is_numeric($_COOKIE[RESP_IMG_COOKIE])) {
     $width = $_COOKIE[RESP_IMG_COOKIE];
+    $ratio = _resp_img_get_device_pixel_ratio();
+    $width = $width * $ratio;
     $bestfit = variable_get('resp_img_default_suffix', '');
     $widths = resp_img_suffix_load_all_breakpoints();
     foreach ($widths as $k => $v) {
@@ -180,6 +182,23 @@ function resp_img_get_best_suffix() {
     }
   }
   return $bestfit;
+}
+
+function _resp_img_get_device_pixel_ratio() {
+  static $ratio = FALSE;
+  if (
+    $ratio === FALSE
+    && variable_get('resp_img_use_device_pixel_ratio', FALSE)
+    && isset($_COOKIE[RESP_IMG_RATIO_COOKIE])
+    && is_numeric($_COOKIE[RESP_IMG_RATIO_COOKIE])
+    )
+  {
+    $ratio = $_COOKIE[RESP_IMG_RATIO_COOKIE];
+  }
+  else {
+    $ratio = 1;
+  }
+  return $ratio;
 }
 
 /**
@@ -417,4 +436,20 @@ function resp_img_block_view_alter(&$data, $block) {
       $data['content']['#post_render'][] = 'resp_img_post_render';
     }
   }
+}
+
+function _resp_img_get_suffix() {
+  static $suffix = FALSE;
+  if ($suffix === FALSE && isset($_COOKIE[RESP_IMG_COOKIE]) && is_numeric($_COOKIE[RESP_IMG_COOKIE])) {
+    $width = $_COOKIE[RESP_IMG_COOKIE];
+    $suffix = variable_get('resp_img_default_suffix', '');
+    $widths = resp_img_suffix_load_all_breakpoints();
+    foreach ($widths as $k => $v) {
+      if ($width >= $v) {
+        $suffix = $k;
+        break;
+      }
+    }
+  }
+  return $suffix;
 }

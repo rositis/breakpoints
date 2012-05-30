@@ -15,6 +15,14 @@
     if(window.devicePixelRatio !== undefined && Drupal.settings.respImg.useDevicePixelRatio) {
       devicePixelRatio = window.devicePixelRatio;
     }
+    $.cookie(
+      "respimg_ratio",
+      devicePixelRatio,
+      {
+        path: Drupal.settings.basePath,
+        expires: 1
+      }
+    );
     // Helper function to calculate width off border and scrollbars
     function borderAndScroll() {
       if (typeof borderAndScroll.current == 'undefined' ) {
@@ -30,9 +38,11 @@
     }
 
     var suffix = '';
+    var suffix_set = false;
+    var cookie_set = false;
     $.each(Drupal.settings.respImg.suffixes, function(index, value) {
-      if (((value - borderAndScroll()) / devicePixelRatio ) <= $(window).width()) {
-        suffix = index;
+      var breakpoint = value - borderAndScroll();
+      if (breakpoint <= $(window).width() && !cookie_set) {
         // set cookie with new width
         $.cookie(
           "respimg",
@@ -42,7 +52,14 @@
             expires: 1
           }
         );
-        return false; // exits .each
+        cookie_set = true;
+      }
+      if ((breakpoint / devicePixelRatio) <= $(window).width() && !suffix_set) {
+        suffix = index;
+        suffix_set = true;
+      }
+      if (cookie_set && suffix_set) {
+        return false; // break .each
       }
     });
     return suffix;
