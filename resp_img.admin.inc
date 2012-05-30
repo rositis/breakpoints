@@ -63,3 +63,67 @@ function resp_img_admin_settings() {
   return system_settings_form($form);
 }
 
+function resp_img_add_style_form($form, &$form_state) {
+  module_load_include('inc', 'image', 'image.admin');
+  $form['style'] = array(
+    '#title' => t('Image style'),
+    '#type' => 'select',
+    '#options' => image_style_options(FALSE),
+    '#required' => TRUE,
+    '#description' => t('This image style will be cloned to create the responsive style'),
+  );
+
+  $form['base_name'] = array(
+    '#type' => 'textfield',
+    '#size' => '64',
+    '#title' => t('Image style base name'),
+    '#description' => t('The name is used in URLs for generated images. Use only lowercase alphanumeric characters, underscores (_), and hyphens (-).'),
+    '#element_validate' => array('image_style_name_validate'),
+    '#required' => TRUE,
+  );
+  $suffixes = resp_img_suffix_load_all();
+  $options = array();
+  $options[variable_get('resp_img_default_suffix', '')] = t('Default') . ' (' . variable_get('resp_img_default_suffix', '') . ')';
+  foreach ($suffixes as $suffix) {
+    $options[$suffix->suffix] = $suffix->label . ' (' . $suffix->suffix . ')';
+  }
+  $form['suffixes'] = array(
+    '#title' => t('Suffixes'),
+    '#type' => 'checkboxes',
+    '#options' => $options,
+    '#description' => t('Select the suffixes to create an image style for'),
+    '#required' => TRUE,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Create'),
+  );
+  return $form;
+}
+
+function resp_img_add_style_form_validate($form, &$form_state) {
+  foreach (array_filter($form_state['values']['suffixes']) as $suffix) {
+    if (image_style_load($form_state['values']['base_name'] . $suffix)) {
+      form_set_error('suffixes', t('An image style with the name !name already exists', array('!name' => $form_state['values']['base_name'] . $suffix)));
+    }
+  }
+}
+
+function resp_img_add_style_form_submit($form, &$form_state) {
+  $base = image_style_load($form_state['values']['style']);
+  foreach (array_filter($form_state['values']['suffixes']) as $suffix) {
+    $new_style = array(
+      'name' => $form_state['values']['base_name'] . $suffix,
+      'module' => 'resp_img',
+      'storage' => IMAGE_STORAGE_NORMAL,
+    );
+    $new_style = image_style_save($new_style);
+    foreach($base['effects'] as $effect) {
+      $effect['isid'] = $new_style['isid'];
+      image_effect_save($effect);
+    }
+  }
+  $form_state['redirect'] = 'admin/config/media/image-styles';
+  drupal_set_message(t('The new styles have been created'));
+}
