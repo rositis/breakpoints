@@ -11,6 +11,10 @@
   }
 
   Drupal.respImg_getOptimalSuffix = function() {
+    var devicePixelRatio = 1;
+    if(window.devicePixelRatio !== undefined && Drupal.settings.respImg.useDevicePixelRatio) {
+      devicePixelRatio = window.devicePixelRatio;
+    }
     // Helper function to calculate width off border and scrollbars
     function borderAndScroll() {
       if (typeof borderAndScroll.current == 'undefined' ) {
@@ -27,7 +31,7 @@
 
     var suffix = '';
     $.each(Drupal.settings.respImg.suffixes, function(index, value) {
-      if ((value - borderAndScroll()) <= $(window).width()) {
+      if (((value - borderAndScroll()) / devicePixelRatio ) <= $(window).width()) {
         suffix = index;
         // set cookie with new width
         $.cookie(

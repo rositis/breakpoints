@@ -60,6 +60,13 @@ function resp_img_admin_settings() {
     '#default_value' => variable_get('resp_img_block_enabled', 1),
   );
 
+  $form['resp_img_use_device_pixel_ratio'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use device pixel ratio'),
+    '#description' => t('Take the device pixel ratio in to account when calculating the right suffix. !link', array('!link' => l('Click here for more information.', 'http://drupal.org/node/1550054'))),
+    '#default_value' => variable_get('resp_img_use_device_pixel_ratio', FALSE),
+  );
+
   return system_settings_form($form);
 }
 

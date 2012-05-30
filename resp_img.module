@@ -5,6 +5,7 @@
  */
 if (!defined('RESP_IMG_COOKIE')) {
   define('RESP_IMG_COOKIE', 'respimg');
+  define('RESP_IMG_RATIO_COOKIE', 'respimg_ratio');
 }
 
 /**
@@ -140,6 +141,7 @@ function resp_img_add_js() {
     $settings['forceRedirect'] = variable_get('resp_img_forceredirect', FALSE);
     $settings['forceResize'] = variable_get('resp_img_forceresize', FALSE);
     $settings['reloadOnResize'] = variable_get('resp_img_reloadonresize', FALSE);
+    $settings['useDevicePixelRatio'] = variable_get('resp_img_use_device_pixel_ratio', FALSE);
     
     $settings['suffixes'] = resp_img_suffix_load_all_breakpoints();
     drupal_add_library('system', 'jquery.cookie');
