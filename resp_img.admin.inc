@@ -91,6 +91,7 @@ function resp_img_add_style_form($form, &$form_state) {
     '#title' => t('Suffixes'),
     '#type' => 'checkboxes',
     '#options' => $options,
+    '#default_value' => drupal_map_assoc(array_keys($options)),
     '#description' => t('Select the suffixes to create an image style for'),
     '#required' => TRUE,
   );
@@ -117,12 +118,9 @@ function resp_img_add_style_form_submit($form, &$form_state) {
       'name' => $form_state['values']['base_name'] . $suffix,
       'module' => 'resp_img',
       'storage' => IMAGE_STORAGE_NORMAL,
+      'effects' => $base['effects'],
     );
-    $new_style = image_style_save($new_style);
-    foreach($base['effects'] as $effect) {
-      $effect['isid'] = $new_style['isid'];
-      image_effect_save($effect);
-    }
+    image_default_style_save($new_style);
   }
   $form_state['redirect'] = 'admin/config/media/image-styles';
   drupal_set_message(t('The new styles have been created'));
