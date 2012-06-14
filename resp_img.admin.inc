@@ -120,6 +120,14 @@ function resp_img_add_style_form_validate($form, &$form_state) {
 
 function resp_img_add_style_form_submit($form, &$form_state) {
   $base = image_style_load($form_state['values']['style']);
+  if (!isset($base['effects'])) {
+    $base['effects'] = array();
+  }
+  foreach ($base['effects'] as &$effect) {
+    unset($effect['isid']);
+    unset($effect['ieid']);
+  }
+  $base['effects'] = array_values($base['effects']);
   foreach (array_filter($form_state['values']['suffixes']) as $suffix) {
     $new_style = array(
       'name' => $form_state['values']['base_name'] . $suffix,
