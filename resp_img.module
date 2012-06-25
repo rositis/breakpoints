@@ -234,7 +234,9 @@ function resp_img_pp_field_slideshow(&$variables) {
   }
   if (isset($variables['items']) && is_array($variables['items'])) {
     foreach ($variables['items'] as $key => $item) {
-      $variables['items'][$key]['path']['path'] = resp_img_replace_suffix($variables['items'][$key]['path']['path']);
+      if (isset($variables['items'][$key]['path']['path'])) {
+        $variables['items'][$key]['path']['path'] = resp_img_replace_suffix($variables['items'][$key]['path']['path']);
+      }
     }
   }
 }
