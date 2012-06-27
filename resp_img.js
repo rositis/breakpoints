@@ -64,33 +64,32 @@
     });
     return suffix;
   }
-  
+
   Drupal.respImg_processSuffixes = function() {
     // Redirect user if needed / wanted
     if (Drupal.settings.respImg.current_suffix === false && Drupal.settings.respImg.forceRedirect == "1") {
       // Make sure browser accepts cookies
-      $.cookie('respimg_test', 'ok');
-      if ($.cookie('respimg_test') === 'ok') {
-        $.cookie('respimg_test', null);
+      if (Drupal.respImg_cookiesEnabled()) {
         var suffix = Drupal.respImg_getOptimalSuffix();
         location.replace(location.href);
+        return;
       }
     }
-    
+
     // get currently used suffix, or default
     var current_suffix = Drupal.settings.respImg.current_suffix;
     if (Drupal.settings.respImg.current_suffix === false) {
       current_suffix = Drupal.settings.respImg.default_suffix;
     }
-    
+
     // get optimal suffix
     var suffix = Drupal.respImg_getOptimalSuffix();
-    
-    if (Drupal.settings.respImg.reloadOnResize == "1" && suffix !== '' && suffix !== current_suffix) {
+
+    if (Drupal.settings.respImg.reloadOnResize == "1" && suffix !== '' && suffix !== current_suffix && Drupal.respImg_cookiesEnabled()) {
       setTimeout(function() {location.reload(true)}, 100);
       return;
     }
-    
+
     if (Drupal.settings.respImg.forceResize == "1" && suffix !== '' && suffix !== current_suffix) {
       // support for images
       $('img').each(function() {
@@ -100,14 +99,14 @@
         img.removeAttr('width');
         img.removeAttr('height');
       });
-      
+
       // support for colorbox links
       $('a.colorbox').each(function() {
         var a = $(this);
         var href = a.attr('href').replace(current_suffix, suffix);
         a.attr('href', href);
       });
-      
+
       // support for field_slideshow (kind of)
       if (typeof(Drupal.behaviors.field_slideshow) == "object") {
         $('div.field-slideshow-processed')
@@ -126,9 +125,20 @@
         $('div.field-slideshow-slide').css('width', '').css('height', '');
         Drupal.behaviors.field_slideshow.attach();
       }
-      
+
       // store last used suffix
       Drupal.settings.respImg.current_suffix = suffix;
     }
-  }  
+  }
+
+  Drupal.respImg_cookiesEnabled = function() {
+    var cookieEnabled = (navigator.cookieEnabled) ? true : false;
+
+    if (typeof navigator.cookieEnabled == "undefined" && !cookieEnabled)
+    {
+        $.cookie('respimg_test', 'ok');
+        cookieEnabled = ($cookie('respimg_test') === 'ok');
+    }
+    return cookieEnabled;
+  }
 } (jQuery));
