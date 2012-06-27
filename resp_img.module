@@ -366,7 +366,7 @@ function _resp_img_replace($content) {
   foreach ($sfx as $suffix) {
     $suffixes[] = $suffix->suffix;
   }
-  // media caches its file urls, so we need to replace all sufixes to the default suffix,
+  // media caches its file urls, so we need to replace all suffixes to the default suffix,
   // before finding the best fitting suffix with resp_img_replace_suffix.
   $imgs = str_replace($suffixes, variable_get('resp_img_default_suffix', ''), $imgs);
   $new_imgs = preg_replace('/(height|width)=("[^"]*")/i', "", $imgs);
