@@ -109,7 +109,7 @@ function resp_img_suffix_load_all() {
 */
 function resp_img_suffix_save(&$resp_img_suffix) {
   $update = (isset($resp_img_suffix->id) && is_numeric($resp_img_suffix->id)) ? array('id') : array();
-  return drupal_write_record('resp_img_suffixs', $resp_img_suffix, $update);
+  return drupal_write_record('resp_img_suffix', $resp_img_suffix, $update);
 }
 
 /**
