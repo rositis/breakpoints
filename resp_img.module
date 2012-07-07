@@ -1,5 +1,7 @@
 <?php
 
+// @todo: refactor picture tag in separate function
+
 /**
  * @file resp_img.module
  */
@@ -515,19 +517,88 @@ function resp_img_add_entity_type_field($form, &$form_state) {
  * Implements hook_entity_view_alter().
  */
 function resp_img_entity_view_alter(&$build, $type) {
-  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-    foreach (element_children($build) as $child) {
-      if (isset($build[$child]['#field_name'])) {
-        if (variable_get('resp_img_' . $build['#entity_type'] . '_' . $build['#bundle'] . '_' . $build[$child]['#field_name'], 0)) {
-          $build[$child]['#post_render'][] = 'resp_img_post_render';
-        }
+  foreach (element_children($build) as $child) {
+    if (isset($build[$child]['#field_name'])) {
+      if (variable_get('resp_img_' . $build['#entity_type'] . '_' . $build['#bundle'] . '_' . $build[$child]['#field_name'], 0)) {
+        $build[$child]['#post_render'][] = 'resp_img_post_render';
       }
     }
   }
 }
 
 function resp_img_post_render($content, $element) {
-  return _resp_img_replace($content);
+  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
+    return _resp_img_replace($content);
+  }
+  else if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_PICTURE) {
+    return _resp_img_replace_picture($content);
+  }
+}
+
+function _resp_img_replace_picture($content) {
+  $result = array();
+  preg_match_all('/<img[^>]+>/i', $content, $result);
+  $orig_imgs = $imgs = $result[0];
+  $default_suffix = variable_get('resp_img_default_suffix', '');
+
+  $sfx = resp_img_suffix_load_all();
+  $suffixes = array();
+  foreach ($sfx as $suffix) {
+    $suffixes[] = $suffix->suffix;
+  }
+  $imgs = str_replace($suffixes, $default_suffix, $imgs);
+  foreach ($imgs as &$img) {
+    if (strpos($img, $default_suffix) !== FALSE) {
+      resp_img_add_js();
+      $img = preg_replace('/(height|width)=("[^"]*")/i', "", $img);
+      $xml  = simplexml_load_string('<image>' . html_entity_decode($img, ENT_QUOTES, "utf-8") . '</image>');
+      $img_data = array();
+      foreach($xml->img[0]->attributes() as $a => $b) {
+        $img_data[$a] = (string)$b;
+      }
+      // convert src to URI
+      // @todo: Ugly! Find a better way?
+      $src = substr($img_data['src'], strpos($img_data['src'], $default_suffix) + strlen($default_suffix) + 1);
+      $count = 1;
+      $src = preg_replace('/\//', '://', $src, 1);
+      
+      $images = array();
+      $output = '';
+      
+      $output .= '<span data-picture data-alt="' . check_plain($img_data['alt']) . '">';
+      
+      // @todo: extract stylename from src
+      $style_name = 'test_mobile';
+      
+      // loop over all suffixes
+      foreach ($sfx as $suffix) {
+        // detect the default one
+        if ($suffix->suffix == $default_suffix) {
+          $output .= '<span data-src="' . image_style_url($style_name, $src) . '"></span>';
+        }
+        else {
+          $images[(int)$suffix->breakpoint] = array(
+            'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $style_name), $src),
+          );
+        }
+      }
+      // sort by size
+      asort($images);
+
+      // add variants to the output
+      foreach ($images as $min_width => $image) {
+        $output .= '<span data-src="' . $image['src'] . '" data-media="(min-width: ' . $min_width . 'px)"></span>';
+      }
+
+      // output the default image as fallback
+      $output .= '<noscript><img src="' . image_style_url($style_name, $src) . '" alt="' . check_plain($img_data['alt']) . '" /></noscript>';
+      $output .= '</span>';
+      
+      $img = $output;
+    }
+  }
+  $content = str_replace($orig_imgs, $imgs, $content);  
+  return $content;
 }
 
 function _resp_img_replace($content) {
