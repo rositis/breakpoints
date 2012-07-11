@@ -3,18 +3,6 @@
 // @todo: refactor picture tag in separate function
 
 /**
- * @file resp_img.module
- */
-if (!defined('RESP_IMG_COOKIE')) {
-  define('RESP_IMG_COOKIE', 'respimg');
-  define('RESP_IMG_RATIO_COOKIE', 'respimg_ratio');
-  define('RESP_IMG_MODE_JAVASCRIPT', 'javascript');
-  define('RESP_IMG_MODE_PICTURE', 'picture');
-
-  define('RESP_IMG_MODE_DEFAULT', RESP_IMG_MODE_PICTURE);
-}
-
-/**
  * Implements hook_ctools_plugin_directory()
  */
 function resp_img_ctools_plugin_directory($module, $plugin) {
@@ -22,49 +10,6 @@ function resp_img_ctools_plugin_directory($module, $plugin) {
     return 'plugins/' . $plugin;
   }
 }
-
-/**
- * Implements hook_init().
- */
-function resp_img_init() {
-  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-    resp_img_add_js();
-    if (module_exists('context')) {
-      $plugin = context_get_plugin('condition', 'resp_img_context_condition_suffix');
-      if ($plugin) {
-        $plugin->execute(resp_img_get_best_suffix());
-      }
-    }
-  }
-}
-
-/**
- * Implements hook_enable().
- */
-function resp_img_enable() {
-  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-    $cache_class_cache_page = variable_get('cache_class_cache_page');
-    if (!empty($cache_class_cache_page)) {
-      variable_set('resp_img_cache_class_cache_page_old', $cache_class_cache_page);
-    }
-    variable_set('cache_class_cache_page', 'RespImgPageCache');
-  }
-}
-
-/**
- * Implements hook_disable().
- */
-function resp_img_disable() {
-  $cache_class_cache_page_old = variable_get('resp_img_cache_class_cache_page_old');
-  if (isset($cache_class_cache_page_old)) {
-    variable_set('cache_class_cache_page', $cache_class_cache_page_old);
-  }
-  else {
-    variable_del('cache_class_cache_page');
-  }
-  variable_del('resp_img_cache_class_cache_page_old');
-}
-
 
 /**
  * Implements hook_menu().
@@ -145,76 +90,9 @@ function resp_img_add_js() {
   static $added = FALSE;
   if (!$added) {
     $added = TRUE;
-    if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-      $settings = array();
-      $settings['default_suffix'] = variable_get('resp_img_default_suffix', '');
-      $settings['current_suffix'] = resp_img_get_best_suffix();
-      $settings['forceRedirect'] = variable_get('resp_img_forceredirect', FALSE);
-      $settings['forceResize'] = variable_get('resp_img_forceresize', FALSE);
-      $settings['reloadOnResize'] = variable_get('resp_img_reloadonresize', FALSE);
-      $settings['useDevicePixelRatio'] = variable_get('resp_img_use_device_pixel_ratio', FALSE);
-
-      $settings['suffixes'] = resp_img_suffix_load_all_breakpoints();
-      drupal_add_library('system', 'jquery.cookie');
-      drupal_add_js(array('respImg' => $settings), array('type' => 'setting', 'weight' => -11, 'group' => JS_DEFAULT));
-      drupal_add_js(drupal_get_path('module', 'resp_img') . '/resp_img.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
-    }
-    elseif (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_PICTURE) {
-      drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/matchmedia.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
-      drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/picturefill.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
-    }
+    drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/matchmedia.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
+    drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/picturefill.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
   }
-}
-
-/**
- * Replace suffix if needed / possible
- */
-function resp_img_replace_suffix($path) {
-  $bestfit_suffix = resp_img_get_best_suffix();
-  $default_suffix = variable_get('resp_img_default_suffix', '');
-
-  if (isset($bestfit_suffix) && !empty($bestfit_suffix) && $bestfit_suffix != $default_suffix) {
-    $path = str_replace($default_suffix, $bestfit_suffix, $path);
-  }
-  return $path;
-}
-
-/**
- * Determine best match
- */
-function resp_img_get_best_suffix() {
-  static $bestfit = FALSE;
-  if ($bestfit === FALSE && isset($_COOKIE[RESP_IMG_COOKIE]) && is_numeric($_COOKIE[RESP_IMG_COOKIE])) {
-    $width = $_COOKIE[RESP_IMG_COOKIE];
-    $ratio = _resp_img_get_device_pixel_ratio();
-    $width = $width * $ratio;
-    $bestfit = variable_get('resp_img_default_suffix', '');
-    $widths = resp_img_suffix_load_all_breakpoints();
-    foreach ($widths as $k => $v) {
-      if ($width >= $v) {
-        $bestfit = $k;
-        break;
-      }
-    }
-  }
-  return $bestfit;
-}
-
-function _resp_img_get_device_pixel_ratio() {
-  static $ratio = FALSE;
-  if (
-    $ratio === FALSE
-    && variable_get('resp_img_use_device_pixel_ratio', FALSE)
-    && isset($_COOKIE[RESP_IMG_RATIO_COOKIE])
-    && is_numeric($_COOKIE[RESP_IMG_RATIO_COOKIE])
-    )
-  {
-    $ratio = $_COOKIE[RESP_IMG_RATIO_COOKIE];
-  }
-  else {
-    $ratio = 1;
-  }
-  return $ratio;
 }
 
 /**
@@ -222,23 +100,7 @@ function _resp_img_get_device_pixel_ratio() {
  */
 function resp_img_theme_registry_alter(&$theme_registry) {
   foreach ($theme_registry as $key => $info) {
-    if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-      if ($key == 'image') {
-        if (isset($theme_registry[$key]['preprocess functions']) && is_array($theme_registry[$key]['preprocess functions'])) {
-          array_unshift($theme_registry[$key]['preprocess functions'], 'resp_img_pp_image');
-        } else {
-          $theme_registry[$key]['preprocess functions'] = array('resp_img_pp_image');
-        }
-      }
-      if ($key == 'field_slideshow') {
-        if (isset($theme_registry[$key]['preprocess functions']) && is_array($theme_registry[$key]['preprocess functions'])) {
-          array_unshift($theme_registry[$key]['preprocess functions'], 'resp_img_pp_field_slideshow');
-        } else {
-          $theme_registry[$key]['preprocess functions'] = array('resp_img_pp_field_slideshow');
-        }
-      }
-    }
-    elseif (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_PICTURE) {
+    if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_PICTURE) {
       if ($key == 'image_style') {
         $theme_registry[$key]['function'] = '_resp_img_pp_image_style';
       }
@@ -247,50 +109,8 @@ function resp_img_theme_registry_alter(&$theme_registry) {
 }
 
 /**
- * Support for field_slideshow.
- */
-function resp_img_pp_field_slideshow(&$variables) {
-  resp_img_add_js();
-
-  if (isset($variables['image_style'])) {
-    $variables['image_style'] = resp_img_replace_suffix($variables['image_style']);
-  }
-  if (isset($variables['items']) && is_array($variables['items'])) {
-    foreach ($variables['items'] as $key => $item) {
-      if (isset($variables['items'][$key]['path']['path'])) {
-        $variables['items'][$key]['path']['path'] = resp_img_replace_suffix($variables['items'][$key]['path']['path']);
-      }
-    }
-  }
-}
-
-/**
  * Support for general images.
  */
-function resp_img_pp_image(&$variables) {
-  resp_img_add_js();
-  if (isset($variables['style_name']) && $variables['style_name'] != resp_img_replace_suffix($variables['style_name'])) {
-    $variables['style_name'] = resp_img_replace_suffix($variables['style_name']);
-    $variables['path'] = resp_img_replace_suffix($variables['path']);
-    foreach (array('width', 'height') as $key) {
-      if (isset($variables[$key])) {
-        unset($variables[$key]);
-      }
-    }
-  }
-}
-
-/**
- * Support for general images.
- */
-
-function resp_img_theme() {
-  return array(
-    'resp_img_image_formatter' => array(
-      'variables' => array('item' => NULL, 'path' => NULL, 'image_style' => NULL),
-    ),
-  );
-}
 
 function _resp_img_pp_image_style($variables) {
   // @TODO: check if we have a responsive style
@@ -328,159 +148,6 @@ function _resp_img_pp_image_style($variables) {
   $output .= '<noscript><img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" /></noscript>';
   $output .= '</span>';
   return $output;
-}
-
-// Solution overriding only theme_image_formatter
-/*
-function resp_img_process_field(&$variables) {
-  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_PICTURE) {
-    if (isset($variables['element']['#field_type']) && $variables['element']['#field_type'] == 'image') {
-      foreach($variables['items'] as $key => $item) {
-//        $variables['items'][$key]['#theme'] = 'resp_img_image_formatter';
-      }
-    }
-  }
-}
-
-function theme_resp_img_image_formatter(&$variables) {
-  resp_img_add_js();
-  $item = $variables['item'];
-  $default_suffix = variable_get('resp_img_default_suffix', '');
-  $images = array();
-  $output = '';
-  $output .= '<pre>' . print_r($variables, TRUE) . '</pre>';
-
-  $output .= '<span data-picture data-alt="' . check_plain($item['alt']) . '">';
-
-  $suffixes = resp_img_suffix_load_all();
-  // loop over all suffixes
-  foreach ($suffixes as $suffix) {
-    // detect the default one
-    if ($suffix->suffix == $default_suffix) {
-      $output .= '<span data-src="' . image_style_url($variables['image_style'], $item['uri']) . '"></span>';
-    }
-    else {
-      $images[(int)$suffix->breakpoint] = array(
-        'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $variables['image_style']), $item['uri']),
-      );
-    }
-  }
-  // sort by size
-  asort($images);
-
-  // add variants to the output
-  foreach ($images as $min_width => $image) {
-    $output .= '<span data-src="' . $image['src'] . '" data-media="(min-width: ' . $min_width . 'px)"></span>';
-  }
-
-  // output the default image as fallback
-  // $output .= '<img src="' . image_style_url($variables['image_style'], $item['uri']) . '" alt="' . check_plain($item['alt']) . '" />';
-  $output .= '<noscript><img src="' . image_style_url($variables['image_style'], $item['uri']) . '" alt="' . check_plain($item['alt']) . '" /></noscript>';
-  $output .= '</span>';
-
-  if (!empty($variables['path']['path'])) {
-    $path = $variables['path']['path'];
-    $options = $variables['path']['options'];
-    $options['html'] = TRUE;
-    $output = l($output, $path, $options);
-  }
-
-  return $output;
-
-  $image = array(
-    'path' => $item['uri'],
-    'alt' => $item['alt'],
-  );
-
-  if (isset($item['attributes'])) {
-    $image['attributes'] = $item['attributes'];
-  }
-
-  if (isset($item['width']) && isset($item['height'])) {
-    $image['width'] = $item['width'];
-    $image['height'] = $item['height'];
-  }
-
-  // Do not output an empty 'title' attribute.
-  if (drupal_strlen($item['title']) > 0) {
-    $image['title'] = $item['title'];
-  }
-
-  if ($variables['image_style']) {
-    $image['style_name'] = $variables['image_style'];
-    $output = theme('image_style', $image);
-  }
-  else {
-    $output = theme('image', $image);
-  }
-
-  if (!empty($variables['path']['path'])) {
-    $path = $variables['path']['path'];
-    $options = $variables['path']['options'];
-    // When displaying an image inside a link, the html option must be TRUE.
-    $options['html'] = TRUE;
-    $output = l($output, $path, $options);
-  }
-
-  return $output;
-}
-*/
-
-/**
- * Alter all links for things like colorbox.
- */
-function resp_img_url_outbound_alter(&$path, &$options, $original_path) {
-  if (!preg_match('|^/?admin/|',$path)) {
-    $path = resp_img_replace_suffix($path);
-  }
-}
-
-/**
- * Alter all image sources.
- */
-function resp_img_file_url_alter(&$uri) {
-  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-    $uri = resp_img_replace_suffix($uri);
-  }
-}
-
-/**
- * Support for purge/expire module.
- * Specific for nginx / barracuda
- * Clears the cache for anonymous users and for the current user
- * Required changes to nginx config files
- * nginx_speed_purge.conf
- *   change fastcgi_cache_purge speed $1$host$request_method$2$is_args$args;
- *   to     fastcgi_cache_purge speed $1$host$2;
- * nginx_advanced_include.conf
- *   change fastcgi_cache_key "$device$host$key_uri$cookie_OctopusCacheID";
- *   to     fastcgi_cache_key "$device$host$key_uri$cookie_OctopusCacheID$cookie_respimg";
- */
-function resp_img_expire_cache_alter (&$expire, $node, &$paths) {
-  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-    if (variable_get('resp_img_purgeexpire', FALSE)) {
-      if (!is_array($expire)) {
-        return;
-      }
-
-      // make array unique
-      $expire = array_unique($expire);
-
-      // add a copy of each path for each defined suffix (using width)
-      $extra_paths = array();
-      $widths = resp_img_suffix_load_all_breakpoints();
-      foreach ($widths as $k => $v) {
-        foreach ($expire as $path) {
-          $extra_paths[] = $path . $v;
-          // if Cache cookie is set add a copy of each path for the current user
-          if (isset($_COOKIE['OctopusCacheID'])) {
-            $extra_paths[] = $path . $_COOKIE['OctopusCacheID'] . $v;
-          }
-        }
-      }
-      $expire = array_merge($expire, $extra_paths);
-    }
-  }
 }
 
 /**
@@ -527,12 +194,7 @@ function resp_img_entity_view_alter(&$build, $type) {
 }
 
 function resp_img_post_render($content, $element) {
-  if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_JAVASCRIPT) {
-    return _resp_img_replace($content);
-  }
-  else if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_PICTURE) {
-    return _resp_img_replace_picture($content);
-  }
+  return _resp_img_replace_picture($content);
 }
 
 function _resp_img_replace_picture($content) {
@@ -603,65 +265,11 @@ function _resp_img_replace_picture($content) {
   return $content;
 }
 
-function _resp_img_replace($content) {
-  $result = array();
-  preg_match_all('/<img[^>]+>/i', $content, $result);
-  $orig_imgs = $imgs = $result[0];
-  $sfx = resp_img_suffix_load_all();
-  $suffixes = array();
-  foreach ($sfx as $suffix) {
-    $suffixes[] = $suffix->suffix;
-  }
-  // media caches its file urls, so we need to replace all suffixes to the default suffix,
-  // before finding the best fitting suffix with resp_img_replace_suffix.
-  $imgs = str_replace($suffixes, variable_get('resp_img_default_suffix', ''), $imgs);
-  $new_imgs = preg_replace('/(height|width)=("[^"]*")/i', "", $imgs);
-  foreach ($new_imgs as &$img) {
-    $src = array();
-    preg_match('/src=("[^"]*")/i', $img, $src);
-    $src = $src[1];
-    $new_src = resp_img_replace_suffix($src);
-    $img = str_replace($src, $new_src, $img);
-  }
-  $content = str_replace($orig_imgs, $new_imgs, $content);
-  return $content;
-}
-
 /**
  * Implements hook_ctools_plugin_api().
  */
 function resp_img_ctools_plugin_api($owner, $api) {
   return array('version' => 1);
-}
-
-/**
- * Implements hook_context_plugins().
- */
-function resp_img_context_plugins() {
-  $plugins = array();
-  $plugins['resp_img_context_condition_suffix'] = array(
-    'handler' => array(
-      'path' => drupal_get_path('module', 'resp_img') .'/plugins',
-      'file' => 'resp_img_context_condition_suffix.inc',
-      'class' => 'resp_img_context_condition_suffix',
-      'parent' => 'context_condition',
-    ),
-  );
-  return $plugins;
-}
-
-/**
- * Implements hook_context_registry().
- */
-function resp_img_context_registry() {
-  return array(
-    'conditions' => array(
-      'resp_img_context_condition_suffix' => array(
-        'title' => t('Responsive Images'),
-        'plugin' => 'resp_img_context_condition_suffix',
-      ),
-    ),
-  );
 }
 
 /**
@@ -678,7 +286,7 @@ function resp_img_entity_info_alter(&$entity_info) {
 function resp_img_block_view_alter(&$data, $block) {
   if (variable_get('resp_img_block_enabled', 1) && isset($data['content'])) {
     if (is_string($data['content'])) {
-      $data['content'] = _resp_img_replace($data['content']);
+      $data['content'] = _resp_img_replace_picture($data['content']);
     }
     else {
       $data['content']['#post_render'][] = 'resp_img_post_render';
@@ -686,18 +294,3 @@ function resp_img_block_view_alter(&$data, $block) {
   }
 }
 
-function _resp_img_get_suffix() {
-  static $suffix = FALSE;
-  if ($suffix === FALSE && isset($_COOKIE[RESP_IMG_COOKIE]) && is_numeric($_COOKIE[RESP_IMG_COOKIE])) {
-    $width = $_COOKIE[RESP_IMG_COOKIE];
-    $suffix = variable_get('resp_img_default_suffix', '');
-    $widths = resp_img_suffix_load_all_breakpoints();
-    foreach ($widths as $k => $v) {
-      if ($width >= $v) {
-        $suffix = $k;
-        break;
-      }
-    }
-  }
-  return $suffix;
-}
