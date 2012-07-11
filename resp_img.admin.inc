@@ -17,54 +17,11 @@ function resp_img_admin_settings() {
     '#size' => 20,
   );
 
-  $form['resp_img_forceredirect'] = array(
-    '#type' => 'select',
-    '#title' => t('Force redirect'),
-    '#description' => t('Force redirect if cookie is not set.'),
-    '#required' => TRUE,
-    '#default_value' => variable_get('resp_img_forceredirect', FALSE),
-    '#options' => array(0 => t('No'), 1 => ('Yes'),),
-  );
-
-  $form['resp_img_forceresize'] = array(
-    '#type' => 'select',
-    '#title' => t('Force resize'),
-    '#description' => t('Resize images when browser windows resizes.'),
-    '#required' => TRUE,
-    '#default_value' => variable_get('resp_img_forceresize', FALSE),
-    '#options' => array(0 => t('No'), 1 => ('Yes'),),
-  );
-
-  $form['resp_img_reloadonresize'] = array(
-    '#type' => 'select',
-    '#title' => t('Reload on resize'),
-    '#description' => t('Reload the page when browser windows resizes, use wisely!'),
-    '#required' => TRUE,
-    '#default_value' => variable_get('resp_img_reloadonresize', FALSE),
-    '#options' => array(0 => t('No'), 1 => ('Yes'),),
-  );
-
-  $form['resp_img_purgeexpire'] = array(
-    '#type' => 'select',
-    '#title' => t('Advanced support for purge/expire'),
-    '#description' => t('Clear all variants using purge/expire modules.'),
-    '#required' => TRUE,
-    '#default_value' => variable_get('resp_img_purgeexpire', FALSE),
-    '#options' => array(0 => t('No'), 1 => ('Yes'),),
-  );
-
   $form['resp_img_block_enabled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable responsive images for blocks.'),
     '#description' => t('If checked, the images within blocks will be responsive as well.'),
     '#default_value' => variable_get('resp_img_block_enabled', 1),
-  );
-
-  $form['resp_img_use_device_pixel_ratio'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Use device pixel ratio'),
-    '#description' => t('Take the device pixel ratio in to account when calculating the right suffix. !link', array('!link' => l('Click here for more information.', 'http://drupal.org/node/1550054'))),
-    '#default_value' => variable_get('resp_img_use_device_pixel_ratio', FALSE),
   );
 
   return system_settings_form($form);
