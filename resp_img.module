@@ -10,7 +10,7 @@ if (!defined('RESP_IMG_COOKIE')) {
   define('RESP_IMG_RATIO_COOKIE', 'respimg_ratio');
   define('RESP_IMG_MODE_JAVASCRIPT', 'javascript');
   define('RESP_IMG_MODE_PICTURE', 'picture');
-  
+
   define('RESP_IMG_MODE_DEFAULT', RESP_IMG_MODE_PICTURE);
 }
 
@@ -153,7 +153,7 @@ function resp_img_add_js() {
       $settings['forceResize'] = variable_get('resp_img_forceresize', FALSE);
       $settings['reloadOnResize'] = variable_get('resp_img_reloadonresize', FALSE);
       $settings['useDevicePixelRatio'] = variable_get('resp_img_use_device_pixel_ratio', FALSE);
-      
+
       $settings['suffixes'] = resp_img_suffix_load_all_breakpoints();
       drupal_add_library('system', 'jquery.cookie');
       drupal_add_js(array('respImg' => $settings), array('type' => 'setting', 'weight' => -11, 'group' => JS_DEFAULT));
@@ -251,7 +251,7 @@ function resp_img_theme_registry_alter(&$theme_registry) {
  */
 function resp_img_pp_field_slideshow(&$variables) {
   resp_img_add_js();
-  
+
   if (isset($variables['image_style'])) {
     $variables['image_style'] = resp_img_replace_suffix($variables['image_style']);
   }
@@ -299,19 +299,19 @@ function _resp_img_pp_image_style($variables) {
   $default_suffix = variable_get('resp_img_default_suffix', '');
   $images = array();
   $output = '';
-  
+
   $output .= '<span data-picture data-alt="' . check_plain($variables['alt']) . '">';
-  
+
   $suffixes = resp_img_suffix_load_all();
   // loop over all suffixes
   foreach ($suffixes as $suffix) {
     // detect the default one
     if ($suffix->suffix == $default_suffix) {
-      $output .= '<span data-src="' . image_style_url($variables['style_name'], $variables['path']) . '"></span>';
+      $output .= '<span data-src="' . image_style_url($variables['style_name'], $variables['uri']) . '"></span>';
     }
     else {
       $images[(int)$suffix->breakpoint] = array(
-        'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $variables['style_name']), $variables['path']),
+        'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $variables['style_name']), $variables['uri']),
       );
     }
   }
@@ -325,7 +325,7 @@ function _resp_img_pp_image_style($variables) {
 
   // output the default image as fallback
   // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
-  $output .= '<noscript><img src="' . image_style_url($variables['style_name'], $variables['path']) . '" alt="' . check_plain($variables['alt']) . '" /></noscript>';
+  $output .= '<noscript><img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" /></noscript>';
   $output .= '</span>';
   return $output;
 }
@@ -349,9 +349,9 @@ function theme_resp_img_image_formatter(&$variables) {
   $images = array();
   $output = '';
   $output .= '<pre>' . print_r($variables, TRUE) . '</pre>';
-  
+
   $output .= '<span data-picture data-alt="' . check_plain($item['alt']) . '">';
-  
+
   $suffixes = resp_img_suffix_load_all();
   // loop over all suffixes
   foreach ($suffixes as $suffix) {
@@ -377,16 +377,16 @@ function theme_resp_img_image_formatter(&$variables) {
   // $output .= '<img src="' . image_style_url($variables['image_style'], $item['uri']) . '" alt="' . check_plain($item['alt']) . '" />';
   $output .= '<noscript><img src="' . image_style_url($variables['image_style'], $item['uri']) . '" alt="' . check_plain($item['alt']) . '" /></noscript>';
   $output .= '</span>';
-  
+
   if (!empty($variables['path']['path'])) {
     $path = $variables['path']['path'];
     $options = $variables['path']['options'];
     $options['html'] = TRUE;
     $output = l($output, $path, $options);
   }
-  
+
   return $output;
-  
+
   $image = array(
     'path' => $item['uri'],
     'alt' => $item['alt'],
@@ -540,64 +540,66 @@ function _resp_img_replace_picture($content) {
   preg_match_all('/<img[^>]+>/i', $content, $result);
   $orig_imgs = $imgs = $result[0];
   $default_suffix = variable_get('resp_img_default_suffix', '');
+  if (!empty($default_suffix)) {
 
-  $sfx = resp_img_suffix_load_all();
-  $suffixes = array();
-  foreach ($sfx as $suffix) {
-    $suffixes[] = $suffix->suffix;
-  }
-  $imgs = str_replace($suffixes, $default_suffix, $imgs);
-  foreach ($imgs as &$img) {
-    if (strpos($img, $default_suffix) !== FALSE) {
-      resp_img_add_js();
-      $img = preg_replace('/(height|width)=("[^"]*")/i', "", $img);
-      $xml  = simplexml_load_string('<image>' . html_entity_decode($img, ENT_QUOTES, "utf-8") . '</image>');
-      $img_data = array();
-      foreach($xml->img[0]->attributes() as $a => $b) {
-        $img_data[$a] = (string)$b;
-      }
-      // convert src to URI
-      // @todo: Ugly! Find a better way?
-      $src = substr($img_data['src'], strpos($img_data['src'], $default_suffix) + strlen($default_suffix) + 1);
-      $count = 1;
-      $src = preg_replace('/\//', '://', $src, 1);
-      
-      $images = array();
-      $output = '';
-      
-      $output .= '<span data-picture data-alt="' . check_plain($img_data['alt']) . '">';
-      
-      // @todo: extract stylename from src
-      $style_name = 'test_mobile';
-      
-      // loop over all suffixes
-      foreach ($sfx as $suffix) {
-        // detect the default one
-        if ($suffix->suffix == $default_suffix) {
-          $output .= '<span data-src="' . image_style_url($style_name, $src) . '"></span>';
-        }
-        else {
-          $images[(int)$suffix->breakpoint] = array(
-            'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $style_name), $src),
-          );
-        }
-      }
-      // sort by size
-      asort($images);
-
-      // add variants to the output
-      foreach ($images as $min_width => $image) {
-        $output .= '<span data-src="' . $image['src'] . '" data-media="(min-width: ' . $min_width . 'px)"></span>';
-      }
-
-      // output the default image as fallback
-      $output .= '<noscript><img src="' . image_style_url($style_name, $src) . '" alt="' . check_plain($img_data['alt']) . '" /></noscript>';
-      $output .= '</span>';
-      
-      $img = $output;
+    $sfx = resp_img_suffix_load_all();
+    $suffixes = array();
+    foreach ($sfx as $suffix) {
+      $suffixes[] = $suffix->suffix;
     }
+    $imgs = str_replace($suffixes, $default_suffix, $imgs);
+    foreach ($imgs as &$img) {
+      if (strpos($img, $default_suffix) !== FALSE) {
+        resp_img_add_js();
+        $img = preg_replace('/(height|width)=("[^"]*")/i', "", $img);
+        $xml  = simplexml_load_string('<image>' . html_entity_decode($img, ENT_QUOTES, "utf-8") . '</image>');
+        $img_data = array();
+        foreach($xml->img[0]->attributes() as $a => $b) {
+          $img_data[$a] = (string)$b;
+        }
+        // convert src to URI
+        // @todo: Ugly! Find a better way?
+        $src = substr($img_data['src'], strpos($img_data['src'], $default_suffix) + strlen($default_suffix) + 1);
+        $count = 1;
+        $src = preg_replace('/\//', '://', $src, 1);
+
+        $images = array();
+        $output = '';
+
+        $output .= '<span data-picture data-alt="' . check_plain($img_data['alt']) . '">';
+
+        // @todo: extract stylename from src
+        $style_name = 'bartik_mobile';
+
+        // loop over all suffixes
+        foreach ($sfx as $suffix) {
+          // detect the default one
+          if ($suffix->suffix == $default_suffix) {
+            $output .= '<span data-src="' . image_style_url($style_name, $src) . '"></span>';
+          }
+          else {
+            $images[(int)$suffix->breakpoint] = array(
+              'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $style_name), $src),
+            );
+          }
+        }
+        // sort by size
+        asort($images);
+
+        // add variants to the output
+        foreach ($images as $min_width => $image) {
+          $output .= '<span data-src="' . $image['src'] . '" data-media="(min-width: ' . $min_width . 'px)"></span>';
+        }
+
+        // output the default image as fallback
+        $output .= '<noscript><img src="' . image_style_url($style_name, $src) . '" alt="' . check_plain($img_data['alt']) . '" /></noscript>';
+        $output .= '</span>';
+
+        $img = $output;
+      }
+    }
+    $content = str_replace($orig_imgs, $imgs, $content);
   }
-  $content = str_replace($orig_imgs, $imgs, $content);  
   return $content;
 }
 
