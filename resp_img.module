@@ -1,6 +1,7 @@
 <?php
 
-// @todo: refactor picture tag in separate function
+// Unique class to avoid double replacements.
+define('RESP_IMG_CLASS', 'resp-img-picture');
 
 /**
  * Implements hook_ctools_plugin_directory()
@@ -100,38 +101,76 @@ function resp_img_add_js() {
  */
 function resp_img_theme_registry_alter(&$theme_registry) {
   foreach ($theme_registry as $key => $info) {
-    if (variable_get('resp_img_mode', RESP_IMG_MODE_DEFAULT) == RESP_IMG_MODE_PICTURE) {
-      if ($key == 'image_style') {
-        $theme_registry[$key]['function'] = '_resp_img_pp_image_style';
-      }
+    if ($key == 'image_style') {
+      $theme_registry[$key]['function'] = '_resp_img_pp_image_style';
     }
   }
 }
 
 /**
- * Support for general images.
+ * Implements hook_theme().
  */
+function resp_img_theme() {
+  return array(
+    'picture' => array(
+      'variables' => array(
+        'style_name' => NULL,
+        'path' => NULL,
+        'width' => NULL,
+        'height' => NULL,
+        'alt' => '',
+        'title' => NULL,
+        'attributes' => array(),
+      ),
+    ),
+  );
+}
 
-function _resp_img_pp_image_style($variables) {
-  // @TODO: check if we have a responsive style
-  // style_name == $default_suffix
-  resp_img_add_js();
+/**
+ * Custom hook_image_style().
+ * @see resp_img_theme_registry_alter
+ */
+function theme_picture($variables) {
+  // add class so we know it got processed.
+  if (!isset($variables['attributes'])) {
+    $variables['attributes'] = array();
+  }
+  if (!isset($variables['attributes']['class'])) {
+    $variables['attributes']['class'] = array();
+  }
+  $variables['attributes']['class'][] = RESP_IMG_CLASS;
+
+  // Make sure that width and height are proper values
+  if (isset($variables['width']) && empty($variables['width'])) {
+    unset($variables['width']);
+    unset($variables['height']);
+  }
+  elseif (isset($variables['height']) && empty($variables['height'])) {
+    unset($variables['width']);
+    unset($variables['height']);
+  }
+
   $default_suffix = variable_get('resp_img_default_suffix', '');
   $images = array();
   $output = '';
 
-  $output .= '<span data-picture data-alt="' . check_plain($variables['alt']) . '">';
+  $output .= '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
 
   $suffixes = resp_img_suffix_load_all();
   // loop over all suffixes
   foreach ($suffixes as $suffix) {
     // detect the default one
     if ($suffix->suffix == $default_suffix) {
-      $output .= '<span data-src="' . image_style_url($variables['style_name'], $variables['uri']) . '"></span>';
+      $images[0] = array(
+        'image' => theme_image_style($variables),
+      );
     }
     else {
+      $new_image = $variables;
+      $new_image['style_name'] = str_replace($default_suffix, $suffix->suffix, $variables['style_name']);
       $images[(int)$suffix->breakpoint] = array(
-        'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $variables['style_name']), $variables['uri']),
+        'image' => theme_image_style($new_image),
+        'media' => '(min-width: ' . (int)$suffix->breakpoint . 'px)',
       );
     }
   }
@@ -140,13 +179,36 @@ function _resp_img_pp_image_style($variables) {
 
   // add variants to the output
   foreach ($images as $min_width => $image) {
-    $output .= '<span data-src="' . $image['src'] . '" data-media="(min-width: ' . $min_width . 'px)"></span>';
+    if (isset($image['media']) && !empty($image['media'])) {
+      $output .= '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
+    }
+    else {
+      $output .= '<source ' . str_replace('<img', '', $image['image']);
+    }
   }
 
   // output the default image as fallback
   // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
-  $output .= '<noscript><img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" /></noscript>';
-  $output .= '</span>';
+  $output .= '<noscript>' . $images[0]['image'] . '</noscript>';
+  $output .= '</picture>';
+
+  return $output;
+}
+/**
+ * Custom hook_image_style().
+ * @see resp_img_theme_registry_alter
+ */
+function _resp_img_pp_image_style($variables) {
+  $default_suffix = variable_get('resp_img_default_suffix', '');
+  if (strpos($variables['style_name'], $default_suffix) !== FALSE) {
+    // add javascript
+    resp_img_add_js();
+
+    $output = theme('picture', $variables);
+  }
+  else {
+    $output = theme_image_style($variables);
+  }
   return $output;
 }
 
@@ -213,51 +275,27 @@ function _resp_img_replace_picture($content) {
     foreach ($imgs as &$img) {
       if (strpos($img, $default_suffix) !== FALSE) {
         resp_img_add_js();
-        $img = preg_replace('/(height|width)=("[^"]*")/i', "", $img);
         $xml  = simplexml_load_string('<image>' . html_entity_decode($img, ENT_QUOTES, "utf-8") . '</image>');
         $img_data = array();
         foreach($xml->img[0]->attributes() as $a => $b) {
           $img_data[$a] = (string)$b;
         }
-        // convert src to URI
-        // @todo: Ugly! Find a better way?
-        $src = substr($img_data['src'], strpos($img_data['src'], $default_suffix) + strlen($default_suffix) + 1);
-        $count = 1;
-        $src = preg_replace('/\//', '://', $src, 1);
 
-        $images = array();
-        $output = '';
+        // Make sure image isn't processed yet.
+        if (!array_key_exists('class', $img_data) || strpos($img_data['class'], RESP_IMG_CLASS) === FALSE) {
+          // convert src to URI.
+          // extract style name.
+          $split_on = '/styles/';
+          $src = substr($img_data['src'], strpos($img_data['src'], $split_on) + strlen($split_on));
+          $src_data = explode('/', $src);
+          $img_data['style_name'] = array_shift($src_data);
+          $style_scheme = array_shift($src_data);
+          $src = implode('/', $src_data);
+          $img_data['uri'] = $style_scheme . '://' . $src;
+          unset($img_data['src']);
 
-        $output .= '<span data-picture data-alt="' . check_plain($img_data['alt']) . '">';
-
-        // @todo: extract stylename from src
-        $style_name = 'bartik_mobile';
-
-        // loop over all suffixes
-        foreach ($sfx as $suffix) {
-          // detect the default one
-          if ($suffix->suffix == $default_suffix) {
-            $output .= '<span data-src="' . image_style_url($style_name, $src) . '"></span>';
-          }
-          else {
-            $images[(int)$suffix->breakpoint] = array(
-              'src' => image_style_url(str_replace($default_suffix, $suffix->suffix, $style_name), $src),
-            );
-          }
+          $img = theme('picture', $img_data);
         }
-        // sort by size
-        asort($images);
-
-        // add variants to the output
-        foreach ($images as $min_width => $image) {
-          $output .= '<span data-src="' . $image['src'] . '" data-media="(min-width: ' . $min_width . 'px)"></span>';
-        }
-
-        // output the default image as fallback
-        $output .= '<noscript><img src="' . image_style_url($style_name, $src) . '" alt="' . check_plain($img_data['alt']) . '" /></noscript>';
-        $output .= '</span>';
-
-        $img = $output;
       }
     }
     $content = str_replace($orig_imgs, $imgs, $content);
