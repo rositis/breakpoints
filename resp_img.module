@@ -152,9 +152,9 @@ function theme_picture($variables) {
 
   $default_suffix = variable_get('resp_img_default_suffix', '');
   $images = array();
-  $output = '';
+  $output = array();
 
-  $output .= '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
+  $output[] = '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
 
   $suffixes = resp_img_suffix_load_all();
   // loop over all suffixes
@@ -180,19 +180,21 @@ function theme_picture($variables) {
   // add variants to the output
   foreach ($images as $min_width => $image) {
     if (isset($image['media']) && !empty($image['media'])) {
-      $output .= '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
+      $output[] = '<!-- <source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']) . ' -->';
+      $output[] = '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
     }
     else {
-      $output .= '<source ' . str_replace('<img', '', $image['image']);
+      $output[] = '<!-- <source ' . str_replace('<img', '', $image['image']) . ' -->';
+      $output[] = '<source ' . str_replace('<img', '', $image['image']);
     }
   }
 
   // output the default image as fallback
   // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
-  $output .= '<noscript>' . $images[0]['image'] . '</noscript>';
-  $output .= '</picture>';
+  $output[] = '<noscript>' . $images[0]['image'] . '</noscript>';
+  $output[] = '</picture>';
 
-  return $output;
+  return implode("\n", $output);
 }
 /**
  * Custom hook_image_style().
