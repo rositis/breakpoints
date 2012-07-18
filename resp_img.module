@@ -28,6 +28,16 @@ function resp_img_menu() {
     'type' => MENU_LOCAL_TASK,
   );
 
+  $items['admin/config/media/resp_img/loadfromtheme'] = array(
+    'title' => 'Load breakpoints from theme',
+    'description' => 'Responsive images and styles',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('resp_img_admin_loadfromtheme'),
+    'access arguments' => array('administer image styles'),
+    'file' => 'resp_img.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
   $items['admin/config/media/resp_img/create_style'] = array(
     'title' => 'Add responsive style',
     'description' => 'Add a responsive image style',

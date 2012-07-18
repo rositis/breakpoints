@@ -27,6 +27,56 @@ function resp_img_admin_settings() {
   return system_settings_form($form);
 }
 
+function resp_img_admin_loadfromtheme($form, &$form_state) {
+  $enabled_themes = array();
+  foreach(list_themes() as $key => $theme) {
+    if ($theme->status) {
+      $enabled_themes[$key] = $theme->info['name'];
+    }
+  }
+  $form['theme'] = array(
+    '#title' => t('Select theme'),
+    '#type' => 'select',
+    '#options' => $enabled_themes,
+    '#required' => TRUE,
+    '#description' => t('Read the breakpoints from this theme and create the suffixes'),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Create'),
+  );
+  return $form;
+
+}
+
+function resp_img_admin_loadfromtheme_validate($form, &$form_state) {
+  if (empty($form_state['values']['theme'])) {
+    form_set_error('theme', 'Please select a theme');
+  }
+}
+
+function resp_img_admin_loadfromtheme_submit($form, &$form_state) {
+  $themes = list_themes();
+  $theme = $form_state['values']['theme'];
+  if (isset($themes[$theme]->info['resp_img'])) {
+    $breakpoints = $themes[$theme]->info['resp_img'];
+    foreach ($breakpoints as $name => $breakpoint) {
+      if (!resp_img_suffix_load($name)) {
+        $resp_img_suffix = array(
+          'name' => $name,
+          'label' => $name,
+          'suffix' => '__' . $name,
+          'breakpoint' => $breakpoint,
+          'table' => 'resp_img_suffix',
+          'export_type' => 1,
+        );
+        drupal_write_record('resp_img_suffix', $resp_img_suffix, array());
+      }
+    }
+  }
+}
+
 function resp_img_add_style_form($form, &$form_state) {
   module_load_include('inc', 'image', 'image.admin');
   $form['style'] = array(
