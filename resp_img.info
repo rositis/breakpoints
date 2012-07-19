@@ -1,6 +1,4 @@
 name = Responsive images and styles
 description = Responsive images and styles
 core = 8.x
-dependencies[] = ctools
 files[] = resp_img.module
-files[] = cache.inc

@@ -4,12 +4,10 @@
 define('RESP_IMG_CLASS', 'resp-img-picture');
 
 /**
- * Implements hook_ctools_plugin_directory()
+ * Implements hook_enable().
  */
-function resp_img_ctools_plugin_directory($module, $plugin) {
-  if ($module == 'ctools' && $plugin == 'export_ui') {
-    return 'plugins/' . $plugin;
-  }
+function resp_img_enable() {
+  config_install_default_config('resp_img');
 }
 
 /**
@@ -17,6 +15,26 @@ function resp_img_ctools_plugin_directory($module, $plugin) {
  */
 function resp_img_menu() {
   $items = array();
+
+  $items['admin/config/media/resp_img'] = array(
+    'title' => 'Responsive images and styles',
+    'description' => 'Define suffixes and breakpoints',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('resp_img_admin_suffixes'),
+    'access arguments' => array('administer image styles'),
+    'file' => 'resp_img.admin.inc',
+  );
+
+  $items['admin/config/media/resp_img/suffixes'] = array(
+    'title' => 'Suffixes and breakpoints',
+    'description' => 'Define suffixes and breakpoints',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('resp_img_admin_suffixes'),
+    'access arguments' => array('administer image styles'),
+    'file' => 'resp_img.admin.inc',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weigt' => -10,
+  );
 
   $items['admin/config/media/resp_img/settings'] = array(
     'title' => 'Settings',
@@ -26,6 +44,7 @@ function resp_img_menu() {
     'access arguments' => array('administer image styles'),
     'file' => 'resp_img.admin.inc',
     'type' => MENU_LOCAL_TASK,
+    'weigt' => 10,
   );
 
   $items['admin/config/media/resp_img/loadfromtheme'] = array(
@@ -36,6 +55,7 @@ function resp_img_menu() {
     'access arguments' => array('administer image styles'),
     'file' => 'resp_img.admin.inc',
     'type' => MENU_LOCAL_TASK,
+    'weigt' => 20,
   );
 
   $items['admin/config/media/resp_img/create_style'] = array(
@@ -46,38 +66,94 @@ function resp_img_menu() {
     'access arguments' => array('administer image styles'),
     'file' => 'resp_img.admin.inc',
     'type' => MENU_LOCAL_TASK,
+    'weigt' => 30,
   );
 
   return $items;
 }
 
 /**
+* Load general settings
+*/
+function resp_img_settings() {
+  $config = config('resp_img');
+  if ($config->isNew()) {
+    return FALSE;
+  }
+  return (object)$config->get();
+}
+
+/**
+* Save general settings
+*/
+function resp_img_settings_save($default_suffix, $block_enabled) {
+  $config = config('resp_img');
+  if ($config->isNew()) {
+    return FALSE;
+  }
+  $config->set('default_suffix', $default_suffix);
+  $config->set('block_enabled', $block_enabled);
+  $config->save();
+}
+
+/**
+* Load default suffix
+*/
+function resp_img_suffix_default() {
+  $config = config('resp_img');
+  if ($config->isNew()) {
+    return FALSE;
+  }
+  return $config->get('default_suffix');
+}
+
+/**
 * Load a single suffix
 */
 function resp_img_suffix_load($name) {
-  ctools_include('export');
-  $result = ctools_export_load_object('resp_img_suffix', 'names', array($name));
-  if (isset($result[$name])) {
-    return $result[$name];
+  $config = config($name);
+  if ($config->isNew()) {
+    return FALSE;
   }
+  return (object)$config->get();
 }
 
 /**
  * Load all suffixes
  */
 function resp_img_suffix_load_all() {
-  ctools_include('export');
-  return ctools_export_load_object('resp_img_suffix');
+  $suffixes = array();
+  $suffix_names = config_get_storage_names_with_prefix('resp_img');
+  foreach ($suffix_names as $suffix) {
+    if ($suffix != 'resp_img') {
+      $suffixes[$suffix] = resp_img_suffix_load($suffix);
+    }
+  }
+  return $suffixes;
 }
 
 /**
 * Save a single suffix
 */
-function resp_img_suffix_save(&$resp_img_suffix) {
-  $update = (isset($resp_img_suffix->id) && is_numeric($resp_img_suffix->id)) ? array('id') : array();
-  return drupal_write_record('resp_img_suffix', $resp_img_suffix, $update);
+function resp_img_suffix_save($resp_img_suffix) {
+  $config = config('resp_img.' . $resp_img_suffix->name);
+  $is_new = $config->isNew();
+
+  $config->set('name', $resp_img_suffix->name);
+  $config->set('suffix', $resp_img_suffix->suffix);
+  $config->set('breakpoint', $resp_img_suffix->breakpoint);
+  $config->save();
+
+  return $resp_img_suffix;
 }
 
+/**
+* Delete a single suffix
+*/
+function resp_img_suffix_delete($resp_img_suffix) {
+  $config = config($resp_img_suffix);
+  $config->delete();
+}
 /**
  * Load suffix and breakpoint for all suffixes
  */
@@ -88,14 +164,13 @@ function resp_img_suffix_load_all_breakpoints() {
     foreach ($suffixes as $suffix) {
       $widths[$suffix->suffix] = (int)$suffix->breakpoint;
     }
-    $widths[variable_get('resp_img_default_suffix', '')] = 1;
     arsort($widths);
   }
   return $widths;
 }
 
 /**
- * Add cookie support, script and settings
+ * Add javascript for older browser support
  */
 function resp_img_add_js() {
   static $added = FALSE;
@@ -160,7 +235,7 @@ function theme_picture($variables) {
     unset($variables['height']);
   }
 
-  $default_suffix = variable_get('resp_img_default_suffix', '');
+  $default_suffix = resp_img_suffix_default();
   $images = array();
   $output = array();
 
@@ -211,7 +286,7 @@ function theme_picture($variables) {
  * @see resp_img_theme_registry_alter
  */
 function _resp_img_pp_image_style($variables) {
-  $default_suffix = variable_get('resp_img_default_suffix', '');
+  $default_suffix = resp_img_suffix_default();
   if (strpos($variables['style_name'], $default_suffix) !== FALSE) {
     // add javascript
     resp_img_add_js();
@@ -275,7 +350,7 @@ function _resp_img_replace_picture($content) {
   $result = array();
   preg_match_all('/<img[^>]+>/i', $content, $result);
   $orig_imgs = $imgs = $result[0];
-  $default_suffix = variable_get('resp_img_default_suffix', '');
+  $default_suffix = resp_img_suffix_default();
   if (!empty($default_suffix)) {
 
     $sfx = resp_img_suffix_load_all();
@@ -313,13 +388,6 @@ function _resp_img_replace_picture($content) {
     $content = str_replace($orig_imgs, $imgs, $content);
   }
   return $content;
-}
-
-/**
- * Implements hook_ctools_plugin_api().
- */
-function resp_img_ctools_plugin_api($owner, $api) {
-  return array('version' => 1);
 }
 
 /**

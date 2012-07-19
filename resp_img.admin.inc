@@ -5,26 +5,216 @@
  * Admin settings
  */
 
+function resp_img_admin_suffixes() {
+  $form = array();
+  $form['suffixes'] = array(
+    '#tree' => TRUE,
+    '#theme' => 'table',
+    '#header' => array(
+      t('Name'),
+      t('Suffix'),
+      t('Breakpoint'),
+      t('Operations'),
+    ),
+  );
+
+  $suffixes = resp_img_suffix_load_all();
+  //dpm($suffixes);
+  foreach ($suffixes as $suffix) {
+    $cell_name = array(
+      '#id' => 'name-' . $suffix->name,
+      '#type' => 'textfield',
+      '#default_value' => $suffix->name,
+      '#disabled' => TRUE,
+      '#size' => 20,
+    );
+    $cell_suffix = array(
+      '#id' => 'suffix-' . $suffix->name,
+      '#type' => 'textfield',
+      '#default_value' => $suffix->suffix,
+      '#size' => 20,
+    );
+    $cell_breakpoint = array(
+      '#id' => 'breakpoint-' . $suffix->name,
+      '#type' => 'textfield',
+      '#default_value' => $suffix->breakpoint,
+      '#size' => 20,
+    );
+    $cell_remove = array(
+      '#id' => 'remove-' . $suffix->name,
+      '#type' => 'submit',
+      '#value' => 'Remove',
+      '#submit' => array('resp_img_admin_suffixes_remove'),
+    );
+
+    $form['suffixes'][] = array(
+      'name' => &$cell_name,
+      'suffix' => &$cell_suffix,
+      'breakpoint' => &$cell_breakpoint,
+      'remove' => &$cell_remove,
+    );
+
+    $form['suffixes']['#rows'][] = array(
+      array('data' => &$cell_name),
+      array('data' => &$cell_suffix),
+      array('data' => &$cell_breakpoint),
+      array('data' => &$cell_remove),
+    );
+
+    unset($cell_name);
+    unset($cell_suffix);
+    unset($cell_breakpoint);
+    unset($cell_remove);
+
+  }
+
+  // Add empty row
+  $cell_name = array(
+    '#id' => 'name-' . 'empty',
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#size' => 20,
+  );
+  $cell_suffix = array(
+    '#id' => 'suffix-' . 'empty',
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#size' => 20,
+  );
+  $cell_breakpoint = array(
+    '#id' => 'breakpoint-' . 'empty',
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#size' => 20,
+  );
+
+  $form['suffixes'][] = array(
+    'name' => &$cell_name,
+    'suffix' => &$cell_suffix,
+    'breakpoint' => &$cell_breakpoint,
+  );
+
+  $form['suffixes']['#rows'][] = array(
+    array('data' => &$cell_name),
+    array('data' => &$cell_suffix),
+    array('data' => &$cell_breakpoint),
+    array('data' => ''),
+  );
+
+  unset($cell_name);
+  unset($cell_suffix);
+  unset($cell_breakpoint);
+  unset($cell_remove);
+
+  // Submit button
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  return $form;
+}
+
+function resp_img_admin_suffixes_remove($form, &$form_state) {
+  $name = substr($form_state['triggering_element']['#id'], strlen('remove-'));
+  resp_img_suffix_delete('resp_img.' . $name);
+}
+
+function resp_img_admin_suffixes_validate($form, &$form_state) {
+  if (strpos($form_state['triggering_element']['#id'], 'remove') === FALSE) {
+    $suffixes = $form_state['values']['suffixes'];
+    if (!empty($suffixes)) {
+      $unique = array(
+        'names' => array(),
+        'suffixes' => array(),
+      );
+      foreach ($suffixes as $key => $suffixdata) {
+        if (!empty($suffixdata['name'])) {
+          // Name has to be unique.
+          if (array_key_exists($suffixdata['name'], $unique['names'])) {
+            form_set_error('suffixes][' . $key . '][name', 'Not unique');
+          }
+          // Suffix is required.
+          if (empty($suffixdata['suffix'])) {
+            form_set_error('suffixes][' . $key . '][suffix', 'Required');
+          }
+          // Suffix has to be unique.
+          elseif (array_key_exists($suffixdata['suffix'], $unique['suffixes'])) {
+            form_set_error('suffixes][' . $key . '][suffix', 'Not unique');
+          }
+          // Breakpoint is required.
+          if (empty($suffixdata['breakpoint'])) {
+            form_set_error('suffixes][' . $key . '][breakpoint', 'Required');
+          }
+          $unique['names'][$suffixdata['name']] = TRUE;
+          $unique['suffixes'][$suffixdata['suffix']] = TRUE;
+        }
+      }
+    }
+  }
+}
+
+function resp_img_admin_suffixes_submit($form, &$form_state) {
+  $suffixes = $form_state['values']['suffixes'];
+  if (!empty($suffixes)) {
+    foreach ($suffixes as $suffixdata) {
+      if (!empty($suffixdata['name'])) {
+        $suffix = resp_img_suffix_load('resp_img.' . $suffixdata['name']);
+        if ($suffix) {
+          $suffix->suffix = $suffixdata['suffix'];
+          $suffix->breakpoint = $suffixdata['breakpoint'];
+          resp_img_suffix_save($suffix);
+        }
+        else {
+          $suffix = new StdClass();
+          $suffix->name = $suffixdata['name'];
+          $suffix->suffix = $suffixdata['suffix'];
+          $suffix->breakpoint = $suffixdata['breakpoint'];
+          resp_img_suffix_save($suffix);
+        }
+      }
+    }
+  }
+}
+
 function resp_img_admin_settings() {
   $form = array();
+  $config = resp_img_settings();
+
+  $suffixes = resp_img_suffix_load_all();
+  $options = array();
+  foreach ($suffixes as $suffix) {
+    $options[$suffix->suffix] = $suffix->name . ' (' . $suffix->suffix . ')';
+  }
 
   $form['resp_img_default_suffix'] = array(
-    '#type' => 'textfield',
+    '#type' => 'select',
     '#title' => t('Default suffix'),
     '#description' => t('Specify the default suffix to use, ex. "_mobile". Make sure you also create the corresponding imagestyles.'),
+    '#options' => $options,
     '#required' => TRUE,
-    '#default_value' => variable_get('resp_img_default_suffix', ''),
-    '#size' => 20,
+    '#default_value' => $config->default_suffix,
   );
 
   $form['resp_img_block_enabled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable responsive images for blocks.'),
     '#description' => t('If checked, the images within blocks will be responsive as well.'),
-    '#default_value' => variable_get('resp_img_block_enabled', 1),
+    '#default_value' => $config->block_enabled,
   );
 
-  return system_settings_form($form);
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  return $form;
+}
+
+function resp_img_admin_settings_submit($form, &$form_state) {
+  resp_img_settings_save(
+    check_plain($form_state['values']['resp_img_default_suffix']),
+    $form_state['values']['resp_img_block_enabled']
+  );
 }
 
 function resp_img_admin_loadfromtheme($form, &$form_state) {
@@ -63,15 +253,11 @@ function resp_img_admin_loadfromtheme_submit($form, &$form_state) {
     $breakpoints = $themes[$theme]->info['resp_img'];
     foreach ($breakpoints as $name => $breakpoint) {
       if (!resp_img_suffix_load($name)) {
-        $resp_img_suffix = array(
-          'name' => $name,
-          'label' => $name,
-          'suffix' => '__' . $name,
-          'breakpoint' => $breakpoint,
-          'table' => 'resp_img_suffix',
-          'export_type' => 1,
-        );
-        drupal_write_record('resp_img_suffix', $resp_img_suffix, array());
+        $suffix = new StdClass();
+        $suffix->name = $name;
+        $suffix->suffix = '__' . $name;
+        $suffix->breakpoint = $breakpoint;
+        resp_img_suffix_save($suffix);
       }
     }
   }
@@ -97,9 +283,8 @@ function resp_img_add_style_form($form, &$form_state) {
   );
   $suffixes = resp_img_suffix_load_all();
   $options = array();
-  $options[variable_get('resp_img_default_suffix', '')] = t('Default') . ' (' . variable_get('resp_img_default_suffix', '') . ')';
   foreach ($suffixes as $suffix) {
-    $options[$suffix->suffix] = $suffix->label . ' (' . $suffix->suffix . ')';
+    $options[$suffix->suffix] = $suffix->name . ' (' . $suffix->suffix . ')';
   }
   $form['suffixes'] = array(
     '#title' => t('Suffixes'),
