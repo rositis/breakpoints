@@ -255,7 +255,7 @@ function theme_picture($variables) {
       $new_image['style_name'] = str_replace($default_suffix, $suffix->suffix, $variables['style_name']);
       $images[(int)$suffix->breakpoint] = array(
         'image' => theme_image_style($new_image),
-        'media' => '(min-width: ' . (int)$suffix->breakpoint . 'px)',
+        'media' => '(min-width: ' . $suffix->breakpoint,
       );
     }
   }

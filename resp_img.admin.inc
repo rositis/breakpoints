@@ -19,7 +19,6 @@ function resp_img_admin_suffixes() {
   );
 
   $suffixes = resp_img_suffix_load_all();
-  //dpm($suffixes);
   foreach ($suffixes as $suffix) {
     $cell_name = array(
       '#id' => 'name-' . $suffix->name,
@@ -143,7 +142,7 @@ function resp_img_admin_suffixes_validate($form, &$form_state) {
             form_set_error('suffixes][' . $key . '][suffix', 'Not unique');
           }
           // Breakpoint is required.
-          if (empty($suffixdata['breakpoint'])) {
+          if (empty($suffixdata['breakpoint']) && $suffixdata['breakpoint'] !== '0') {
             form_set_error('suffixes][' . $key . '][breakpoint', 'Required');
           }
           $unique['names'][$suffixdata['name']] = TRUE;
@@ -315,19 +314,12 @@ function resp_img_add_style_form_submit($form, &$form_state) {
   if (!isset($base['effects'])) {
     $base['effects'] = array();
   }
-  foreach ($base['effects'] as &$effect) {
-    unset($effect['isid']);
-    unset($effect['ieid']);
-  }
-  $base['effects'] = array_values($base['effects']);
   foreach (array_filter($form_state['values']['suffixes']) as $suffix) {
     $new_style = array(
       'name' => $form_state['values']['base_name'] . $suffix,
-      'module' => 'resp_img',
-      'storage' => IMAGE_STORAGE_NORMAL,
       'effects' => $base['effects'],
     );
-    image_default_style_save($new_style);
+    image_style_save($new_style);
   }
   $form_state['redirect'] = 'admin/config/media/image-styles';
   drupal_set_message(t('The new styles have been created'));
