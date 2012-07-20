@@ -2,6 +2,7 @@
 
 // Unique class to avoid double replacements.
 define('RESP_IMG_CLASS', 'resp-img-picture');
+define('RESP_IMG_SEPARATOR', '__');
 
 /**
  * Implements hook_enable().
@@ -96,14 +97,35 @@ function resp_img_settings_save($default_suffix, $block_enabled) {
 }
 
 /**
-* Load default suffix
+* Load name of default suffix
 */
-function resp_img_suffix_default() {
-  $config = config('resp_img');
-  if ($config->isNew()) {
-    return FALSE;
+function resp_img_suffix_default_name($theme_key = '') {
+  $default_suffix = FALSE;
+  if ($theme_key == '') {
+    $theme_key = variable_get('theme_default', 'stark');
   }
-  return $config->get('default_suffix');
+  if (theme_get_setting('resp_img_use_default', $theme_key)) {
+    $themes = list_themes();
+    if (isset($themes[$theme_key]->info['resp_img_default_suffix'])) {
+      $default_suffix = $themes[$theme_key]->info['resp_img_default_suffix'];
+    }
+  }
+  else {
+    $config = config('resp_img');
+    if ($config->isNew()) {
+      return $default_suffix;
+    }
+    $default_suffix = $config->get('default_suffix');
+  }
+
+  return $default_suffix;
+}
+
+function resp_img_suffix_default($theme_key = '') {
+  $default_suffix = resp_img_suffix_default_name($theme_key);
+  if ($default_suffix) {
+    $default_suffix = '__' . $default_suffix;
+  }
 }
 
 /**
@@ -120,7 +142,20 @@ function resp_img_suffix_load($name) {
 /**
  * Load all suffixes
  */
-function resp_img_suffix_load_all() {
+function resp_img_suffix_load_all($theme_key = '') {
+  if ($theme_key == '') {
+    $theme_key = variable_get('theme_default', 'stark');
+  }
+  $suffixes_user = resp_img_suffix_load_all_userdefined();
+  $suffixes_theme = resp_img_suffix_load_all_from_theme($theme_key);
+  $suffixes = array_merge($suffixes_theme, $suffixes_user);
+  return $suffixes;
+}
+
+/**
+ * Load all user/module defined suffixes.
+ */
+function resp_img_suffix_load_all_userdefined() {
   $suffixes = array();
   $suffix_names = config_get_storage_names_with_prefix('resp_img');
   foreach ($suffix_names as $suffix) {
@@ -132,7 +167,7 @@ function resp_img_suffix_load_all() {
 }
 
 /**
- * Load all enabled suffixes from the theme
+ * Load all enabled suffixes from the theme.
  */
 function resp_img_suffix_load_all_from_theme($theme_key) {
   $suffixes = array();
@@ -143,7 +178,7 @@ function resp_img_suffix_load_all_from_theme($theme_key) {
     foreach ($theme_settings as $name => $breakpoint) {
       $suffix = new StdClass();
       $suffix->name = $name;
-      $suffix->suffix = '__' . $name;
+      $suffix->suffix = RESP_IMG_SEPARATOR . $name;
       $suffix->breakpoint = $breakpoint;
       $suffix->source = 'theme';
       if (theme_get_setting('resp_img_use_default', $theme_key)) {
@@ -502,6 +537,21 @@ function resp_img_form_system_theme_settings_alter(&$form, &$form_state) {
           ),
         ),
       );
+      // Default suffix
+      $suffixes = resp_img_suffix_load_all($theme_key);
+      $options = array();
+      foreach ($suffixes as $suffix) {
+        $options[$suffix->name] = $suffix->name . ' (' . $suffix->suffix . ')';
+      }
+
+      $form['resp_img_fs']['resp_img']['resp_img_default_suffix'] = array(
+        '#type' => 'select',
+        '#title' => t('Default suffix'),
+        '#description' => t('Specify the default suffix to use, ex. "_mobile". Make sure you also create the corresponding imagestyles.'),
+        '#options' => $options,
+        '#required' => TRUE,
+        '#default_value' => resp_img_suffix_default_name($theme_key),
+      );
       foreach ($theme_settings as $key => $value) {
         $form['resp_img_fs']['resp_img'][$key] = array(
           '#type' => 'checkbox',
@@ -518,5 +568,7 @@ function resp_img_form_system_theme_settings_alter(&$form, &$form_state) {
  */
 function resp_img_form_system_theme_settings_submit($form, &$form_state) {
   $form_state['values'] += $form_state['values']['resp_img_fs'];
+  $form_state['values']['resp_img_default_suffix'] = $form_state['values']['resp_img']['resp_img_default_suffix'];
+  unset($form_state['values']['resp_img']['resp_img_default_suffix']);
   unset($form_state['values']['resp_img_fs']);
 }

@@ -42,7 +42,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key) {
     ),
   );
 
-  $suffixes = resp_img_suffix_load_all();
+  $suffixes = resp_img_suffix_load_all_userdefined();
   foreach ($suffixes as $suffix) {
     $cell_name = array(
       '#id' => 'name-' . $suffix->name,
@@ -176,7 +176,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
         else {
           $suffix = new StdClass();
           $suffix->name = $suffixdata['name'];
-          $suffix->suffix = '__' . $suffix->name;
+          $suffix->suffix = RESP_IMG_SEPARATOR . $suffix->name;
           $suffix->breakpoint = $suffixdata['breakpoint'];
           $suffix->source = 'user';
           $suffix->status = TRUE;
@@ -265,7 +265,7 @@ function resp_img_admin_loadfromtheme_submit($form, &$form_state) {
       if (!resp_img_suffix_load($name)) {
         $suffix = new StdClass();
         $suffix->name = $name;
-        $suffix->suffix = '__' . $name;
+        $suffix->suffix = RESP_IMG_SEPARATOR . $name;
         $suffix->breakpoint = $breakpoint;
         $suffix->source = 'theme';
         resp_img_suffix_save($suffix);
