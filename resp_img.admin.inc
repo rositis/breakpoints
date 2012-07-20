@@ -5,15 +5,40 @@
  * Admin settings
  */
 
-function resp_img_admin_suffixes() {
+function resp_img_admin_suffixes($form, &$form_state, $theme_key) {
   $form = array();
+
+  // Suffixes defined by the theme
+  $theme_suffixes = resp_img_suffix_load_all_active_from_theme($theme_key);
+  if (!empty($theme_suffixes)) {
+    $rows = array();
+    foreach ($theme_suffixes as $suffix) {
+      $rows[] = array(
+        $suffix->name,
+        $suffix->breakpoint,
+      );
+    }
+    $form['theme_suffixes'] = array(
+      '#tree' => TRUE,
+      '#caption' => 'Active suffixes from the theme.',
+      '#theme' => 'table',
+      '#header' => array(
+        t('Name'),
+        t('Breakpoint'),
+      ),
+      '#rows' => $rows,
+    );
+  }
+
+
   $form['suffixes'] = array(
     '#tree' => TRUE,
+    '#caption' => 'Suffixes defined by module or user.',
     '#theme' => 'table',
     '#header' => array(
       t('Name'),
       t('Breakpoint'),
-      t('Operations'),
+      array('data' => t('Operations'), 'colspan' => 2),
     ),
   );
 
@@ -40,22 +65,31 @@ function resp_img_admin_suffixes() {
       '#disabled' => $suffix->source === 'theme',
       '#submit' => array('resp_img_admin_suffixes_remove'),
     );
+    $cell_enable = array(
+      '#id' => 'enable-' . $suffix->name,
+      '#type' => 'submit',
+      '#value' => $suffix->status ? 'Disable' : 'Enable',
+      '#submit' => array('resp_img_admin_suffixes_enabledisable'),
+    );
 
     $form['suffixes'][] = array(
       'name' => &$cell_name,
       'breakpoint' => &$cell_breakpoint,
       'remove' => &$cell_remove,
+      'enable' => &$cell_enable,
     );
 
     $form['suffixes']['#rows'][] = array(
       array('data' => &$cell_name),
       array('data' => &$cell_breakpoint),
       array('data' => &$cell_remove),
+      array('data' => &$cell_enable),
     );
 
     unset($cell_name);
     unset($cell_breakpoint);
     unset($cell_remove);
+    unset($cell_enable);
 
   }
 
@@ -81,7 +115,7 @@ function resp_img_admin_suffixes() {
   $form['suffixes']['#rows'][] = array(
     array('data' => &$cell_name),
     array('data' => &$cell_breakpoint),
-    array('data' => ''),
+    array('data' => '', 'colspan' => 2),
   );
 
   unset($cell_name);
@@ -100,6 +134,11 @@ function resp_img_admin_suffixes() {
 function resp_img_admin_suffixes_remove($form, &$form_state) {
   $name = substr($form_state['triggering_element']['#id'], strlen('remove-'));
   resp_img_suffix_delete('resp_img.' . $name);
+}
+
+function resp_img_admin_suffixes_enabledisable($form, &$form_state) {
+  $name = substr($form_state['triggering_element']['#id'], strlen('remove-'));
+  resp_img_suffix_toggle_status('resp_img.' . $name);
 }
 
 function resp_img_admin_suffixes_validate($form, &$form_state) {
@@ -140,6 +179,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
           $suffix->suffix = '__' . $suffix->name;
           $suffix->breakpoint = $suffixdata['breakpoint'];
           $suffix->source = 'user';
+          $suffix->status = TRUE;
           resp_img_suffix_save($suffix);
         }
       }

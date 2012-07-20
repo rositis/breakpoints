@@ -25,16 +25,15 @@ function resp_img_menu() {
     'file' => 'resp_img.admin.inc',
   );
 
-  $items['admin/config/media/resp_img/suffixes'] = array(
-    'title' => 'Suffixes and breakpoints',
-    'description' => 'Define suffixes and breakpoints',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('resp_img_admin_suffixes'),
-    'access arguments' => array('administer image styles'),
-    'file' => 'resp_img.admin.inc',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weigt' => -10,
-  );
+  foreach (list_themes() as $key => $theme) {
+    $items['admin/config/media/resp_img/' . $theme->name] = array(
+      'title' => $theme->info['name'],
+      'page arguments' => array('resp_img_admin_suffixes', $theme->name),
+      'type' => MENU_LOCAL_TASK,
+      'access arguments' => array('administer image styles'),
+      'file' => 'resp_img.admin.inc',
+    );
+  }
 
   $items['admin/config/media/resp_img/settings'] = array(
     'title' => 'Settings',
@@ -129,17 +128,50 @@ function resp_img_suffix_load_all() {
       $suffixes[$suffix] = resp_img_suffix_load($suffix);
     }
   }
-  // Get theme defined breakpoints
-  global $theme_info;
-  global $theme_key;
-  if (isset($theme_info->info['resp_img'])) {
-    $theme_settings = $theme_info->info['resp_img'];
-    if (!theme_get_setting('resp_img_use_default', $theme_key)) {
-      $saved_settings = theme_get_setting('resp_img', $theme_key);
-      $theme_settings = array_merge($theme_settings, $saved_settings);
+  return $suffixes;
+}
+
+/**
+ * Load all enabled suffixes from the theme
+ */
+function resp_img_suffix_load_all_from_theme($theme_key) {
+  $suffixes = array();
+  $themes = list_themes();
+  if (isset($themes[$theme_key]->info['resp_img'])) {
+    $theme_settings = $themes[$theme_key]->info['resp_img'];
+    $saved_settings = theme_get_setting('resp_img', $theme_key);
+    foreach ($theme_settings as $name => $breakpoint) {
+      $suffix = new StdClass();
+      $suffix->name = $name;
+      $suffix->suffix = '__' . $name;
+      $suffix->breakpoint = $breakpoint;
+      $suffix->source = 'theme';
+      if (theme_get_setting('resp_img_use_default', $theme_key)) {
+        $suffix->status = TRUE;
+      }
+      else {
+        $suffix->status = isset($saved_settings[$name]) && $saved_settings[$name];
+      }
+      $suffixes[$suffix->suffix] = $suffix;
     }
   }
   return $suffixes;
+}
+
+/**
+ * Load all enabled suffixes from the theme
+ */
+function resp_img_suffix_load_all_active_from_theme($theme_key) {
+  $suffixes = resp_img_suffix_load_all_from_theme($theme_key);
+  $enabled = array();
+  if (!empty($suffixes)) {
+    foreach ($suffixes as $suffix) {
+      if ($suffix->status) {
+        $enabled[$suffix->suffix] = $suffix;
+      }
+    }
+  }
+  return $enabled;
 }
 
 /**
@@ -153,6 +185,7 @@ function resp_img_suffix_save($resp_img_suffix) {
   $config->set('suffix', $resp_img_suffix->suffix);
   $config->set('breakpoint', $resp_img_suffix->breakpoint);
   $config->set('source', $resp_img_suffix->source);
+  $config->set('status', $resp_img_suffix->status);
   $config->save();
 
   return $resp_img_suffix;
@@ -165,6 +198,16 @@ function resp_img_suffix_delete($resp_img_suffix) {
   $config = config($resp_img_suffix);
   $config->delete();
 }
+
+/**
+* Toggle status of a single suffix
+*/
+function resp_img_suffix_toggle_status($resp_img_suffix) {
+  $config = config($resp_img_suffix);
+  $config->set('status', !$config->get('status'));
+  $config->save();
+}
+
 /**
  * Load suffix and breakpoint for all suffixes
  */
