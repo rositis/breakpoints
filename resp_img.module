@@ -237,6 +237,7 @@ function theme_picture($variables) {
   }
 
   $default_suffix = resp_img_suffix_default();
+  $default_breakpoint = '';
   $images = array();
   $output = array();
 
@@ -247,6 +248,7 @@ function theme_picture($variables) {
   foreach ($suffixes as $suffix) {
     // detect the default one
     if ($suffix->suffix == $default_suffix) {
+      $default_breakpoint = $suffix->breakpoint;
       $images[$suffix->breakpoint] = array(
         'image' => theme_image_style($variables),
       );
@@ -278,7 +280,7 @@ function theme_picture($variables) {
 
   // output the default image as fallback
   // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
-  $output[] = '<noscript>' . $images[0]['image'] . '</noscript>';
+  $output[] = '<noscript>' . $images[$default_breakpoint]['image'] . '</noscript>';
   $output[] = '</picture>';
 
   return implode("\n", $output);
