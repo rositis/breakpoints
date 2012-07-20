@@ -264,7 +264,7 @@ function theme_picture($variables) {
   }
   // sort by size
   // @todo: how to handle mix of em and px?
-  asort($images);
+  ksort($images);
 
   // add variants to the output
   foreach ($images as $min_width => $image) {
