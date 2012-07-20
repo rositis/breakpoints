@@ -92,14 +92,17 @@
 				} else {
 					// No `srcset` in play, so just use the `src` value:
 					picImg.src = match.getAttribute( "src" );
-					if (match.getAttribute( "width" ) && match.getAttribute( "height" )) {
-            picImg.width = match.getAttribute( "width" );
-  					picImg.height = match.getAttribute( "height" );
-          }
-          if (match.getAttribute( "title" )) {
-  					picImg.title = match.getAttribute( "title" );
-          }
 				}
+        if (match.getAttribute( "width" ) && match.getAttribute( "height" )) {
+          picImg.width = match.getAttribute( "width" );
+          picImg.height = match.getAttribute( "height" );
+        }
+        if (match.getAttribute( "title" )) {
+          picImg.title = match.getAttribute( "title" );
+        }
+        if (match.getAttribute( "class" )) {
+          picImg.setAttribute ("class", match.getAttribute( "class" ));
+        }
 			}
 		}
 		/*

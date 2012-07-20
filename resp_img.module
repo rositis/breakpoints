@@ -178,6 +178,7 @@ function resp_img_add_js() {
     $added = TRUE;
     drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/matchmedia.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
     drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/picturefill.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
+    drupal_add_css(drupal_get_path('module', 'resp_img') . '/resp_img.css', array('type' => 'file', 'weight' => -10));
   }
 }
 
