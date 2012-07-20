@@ -24,6 +24,7 @@ function resp_img_menu() {
     'page arguments' => array('resp_img_admin_suffixes'),
     'access arguments' => array('administer image styles'),
     'file' => 'resp_img.admin.inc',
+    'weight' => 10,
   );
 
   foreach (list_themes() as $key => $theme) {
@@ -33,30 +34,13 @@ function resp_img_menu() {
       'type' => MENU_LOCAL_TASK,
       'access arguments' => array('administer image styles'),
       'file' => 'resp_img.admin.inc',
+      'weight' => 15,
     );
+    if ($key == variable_get('theme_default', 'stark')) {
+      $items['admin/config/media/resp_img/' . $theme->name]['weight'] = 11;
+      $items['admin/config/media/resp_img/' . $theme->name]['type'] = MENU_DEFAULT_LOCAL_TASK;
+    }
   }
-
-  $items['admin/config/media/resp_img/settings'] = array(
-    'title' => 'Settings',
-    'description' => 'Responsive images and styles',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('resp_img_admin_settings'),
-    'access arguments' => array('administer image styles'),
-    'file' => 'resp_img.admin.inc',
-    'type' => MENU_LOCAL_TASK,
-    'weigt' => 10,
-  );
-
-  $items['admin/config/media/resp_img/loadfromtheme'] = array(
-    'title' => 'Load breakpoints from theme',
-    'description' => 'Responsive images and styles',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('resp_img_admin_loadfromtheme'),
-    'access arguments' => array('administer image styles'),
-    'file' => 'resp_img.admin.inc',
-    'type' => MENU_LOCAL_TASK,
-    'weigt' => 20,
-  );
 
   $items['admin/config/media/resp_img/create_style'] = array(
     'title' => 'Add responsive style',
@@ -66,7 +50,7 @@ function resp_img_menu() {
     'access arguments' => array('administer image styles'),
     'file' => 'resp_img.admin.inc',
     'type' => MENU_LOCAL_TASK,
-    'weigt' => 30,
+    'weight' => 30,
   );
 
   return $items;
@@ -100,32 +84,34 @@ function resp_img_settings_save($default_suffix, $block_enabled) {
 * Load name of default suffix
 */
 function resp_img_suffix_default_name($theme_key = '') {
-  $default_suffix = FALSE;
-  if ($theme_key == '') {
-    $theme_key = variable_get('theme_default', 'stark');
-  }
-  if (theme_get_setting('resp_img_use_default', $theme_key)) {
-    $themes = list_themes();
-    if (isset($themes[$theme_key]->info['resp_img_default_suffix'])) {
-      $default_suffix = $themes[$theme_key]->info['resp_img_default_suffix'];
+  static $default_suffix = FALSE;
+  if ($default_suffix === FALSE) {
+    $default_suffix = '';
+    if ($theme_key == '') {
+      $theme_key = variable_get('theme_default', 'stark');
+    }
+    if (theme_get_setting('resp_img_use_default', $theme_key)) {
+      $themes = list_themes();
+      if (isset($themes[$theme_key]->info['resp_img_default_suffix'])) {
+        $default_suffix = $themes[$theme_key]->info['resp_img_default_suffix'];
+      }
+    }
+    else {
+      $config = config('resp_img');
+      if (!$config->isNew()) {
+        $default_suffix = $config->get('default_suffix');
+      }
     }
   }
-  else {
-    $config = config('resp_img');
-    if ($config->isNew()) {
-      return $default_suffix;
-    }
-    $default_suffix = $config->get('default_suffix');
-  }
-
   return $default_suffix;
 }
 
 function resp_img_suffix_default($theme_key = '') {
   $default_suffix = resp_img_suffix_default_name($theme_key);
   if ($default_suffix) {
-    $default_suffix = '__' . $default_suffix;
+    $default_suffix = RESP_IMG_SEPARATOR . $default_suffix;
   }
+  return $default_suffix;
 }
 
 /**
@@ -147,9 +133,25 @@ function resp_img_suffix_load_all($theme_key = '') {
     $theme_key = variable_get('theme_default', 'stark');
   }
   $suffixes_user = resp_img_suffix_load_all_userdefined();
-  $suffixes_theme = resp_img_suffix_load_all_from_theme($theme_key);
+  $suffixes_theme = resp_img_suffix_load_all_fromtheme($theme_key);
   $suffixes = array_merge($suffixes_theme, $suffixes_user);
   return $suffixes;
+}
+
+/**
+ * Load all user/module defined suffixes.
+ */
+function resp_img_suffix_load_all_active($theme_key = '') {
+  $suffixes = resp_img_suffix_load_all($theme_key);
+  $enabled = array();
+  if (!empty($suffixes)) {
+    foreach ($suffixes as $suffix) {
+      if ($suffix->status) {
+        $enabled[$suffix->suffix] = $suffix;
+      }
+    }
+  }
+  return $enabled;
 }
 
 /**
@@ -167,9 +169,9 @@ function resp_img_suffix_load_all_userdefined() {
 }
 
 /**
- * Load all enabled suffixes from the theme.
+ * Load all suffixes from the theme.
  */
-function resp_img_suffix_load_all_from_theme($theme_key) {
+function resp_img_suffix_load_all_fromtheme($theme_key) {
   $suffixes = array();
   $themes = list_themes();
   if (isset($themes[$theme_key]->info['resp_img'])) {
@@ -197,7 +199,7 @@ function resp_img_suffix_load_all_from_theme($theme_key) {
  * Load all enabled suffixes from the theme
  */
 function resp_img_suffix_load_all_active_from_theme($theme_key) {
-  $suffixes = resp_img_suffix_load_all_from_theme($theme_key);
+  $suffixes = resp_img_suffix_load_all_fromtheme($theme_key);
   $enabled = array();
   if (!empty($suffixes)) {
     foreach ($suffixes as $suffix) {
@@ -241,21 +243,6 @@ function resp_img_suffix_toggle_status($resp_img_suffix) {
   $config = config($resp_img_suffix);
   $config->set('status', !$config->get('status'));
   $config->save();
-}
-
-/**
- * Load suffix and breakpoint for all suffixes
- */
-function resp_img_suffix_load_all_breakpoints() {
-  static $widths = array();
-  if (empty($widths)) {
-    $suffixes = resp_img_suffix_load_all();
-    foreach ($suffixes as $suffix) {
-      $widths[$suffix->suffix] = (int)$suffix->breakpoint;
-    }
-    arsort($widths);
-  }
-  return $widths;
 }
 
 /**
@@ -332,7 +319,9 @@ function theme_picture($variables) {
 
   $output[] = '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
 
-  $suffixes = resp_img_suffix_load_all();
+  $suffixes = resp_img_suffix_load_all_active();
+  $image_styles = image_styles();
+
   // loop over all suffixes
   foreach ($suffixes as $suffix) {
     // detect the default one
@@ -345,10 +334,12 @@ function theme_picture($variables) {
     else {
       $new_image = $variables;
       $new_image['style_name'] = str_replace($default_suffix, $suffix->suffix, $variables['style_name']);
-      $images[$suffix->breakpoint] = array(
-        'image' => theme_image_style($new_image),
-        'media' => '(min-width: ' . $suffix->breakpoint . ')',
-      );
+      if (array_key_exists($new_image['style_name'], $image_styles)) {
+        $images[$suffix->breakpoint] = array(
+          'image' => theme_image_style($new_image),
+          'media' => '(min-width: ' . $suffix->breakpoint . ')',
+        );
+      }
     }
   }
   // sort by size
@@ -383,7 +374,6 @@ function _resp_img_pp_image_style($variables) {
   if (strpos($variables['style_name'], $default_suffix) !== FALSE) {
     // add javascript
     resp_img_add_js();
-
     $output = theme('picture', $variables);
   }
   else {
@@ -446,7 +436,7 @@ function _resp_img_replace_picture($content) {
   $default_suffix = resp_img_suffix_default();
   if (!empty($default_suffix)) {
 
-    $sfx = resp_img_suffix_load_all();
+    $sfx = resp_img_suffix_load_all_active();
     $suffixes = array();
     foreach ($sfx as $suffix) {
       $suffixes[] = $suffix->suffix;
@@ -538,7 +528,7 @@ function resp_img_form_system_theme_settings_alter(&$form, &$form_state) {
         ),
       );
       // Default suffix
-      $suffixes = resp_img_suffix_load_all($theme_key);
+      $suffixes = resp_img_suffix_load_all_active($theme_key);
       $options = array();
       foreach ($suffixes as $suffix) {
         $options[$suffix->name] = $suffix->name . ' (' . $suffix->suffix . ')';

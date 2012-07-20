@@ -5,7 +5,10 @@
  * Admin settings
  */
 
-function resp_img_admin_suffixes($form, &$form_state, $theme_key) {
+function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
+  if ($theme_key == '') {
+    $theme_key = variable_get('theme_default', 'stark');
+  }
   $form = array();
 
   // Suffixes defined by the theme
@@ -293,7 +296,7 @@ function resp_img_add_style_form($form, &$form_state) {
     '#element_validate' => array('image_style_name_validate'),
     '#required' => TRUE,
   );
-  $suffixes = resp_img_suffix_load_all();
+  $suffixes = resp_img_suffix_load_all_active();
   $options = array();
   foreach ($suffixes as $suffix) {
     $options[$suffix->suffix] = $suffix->name . ' (' . $suffix->suffix . ')';
