@@ -1,3 +1,4 @@
 name: wide
 suffix: __wide
 breakpoint: 960px
+source: resp_img

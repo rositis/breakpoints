@@ -129,6 +129,16 @@ function resp_img_suffix_load_all() {
       $suffixes[$suffix] = resp_img_suffix_load($suffix);
     }
   }
+  // Get theme defined breakpoints
+  global $theme_info;
+  global $theme_key;
+  if (isset($theme_info->info['resp_img'])) {
+    $theme_settings = $theme_info->info['resp_img'];
+    if (!theme_get_setting('resp_img_use_default', $theme_key)) {
+      $saved_settings = theme_get_setting('resp_img', $theme_key);
+      $theme_settings = array_merge($theme_settings, $saved_settings);
+    }
+  }
   return $suffixes;
 }
 
@@ -142,6 +152,7 @@ function resp_img_suffix_save($resp_img_suffix) {
   $config->set('name', $resp_img_suffix->name);
   $config->set('suffix', $resp_img_suffix->suffix);
   $config->set('breakpoint', $resp_img_suffix->breakpoint);
+  $config->set('source', $resp_img_suffix->source);
   $config->save();
 
   return $resp_img_suffix;
@@ -416,3 +427,53 @@ function resp_img_block_view_alter(&$data, $block) {
   }
 }
 
+
+/**
+ * Implements hook_form_alter().
+ */
+function resp_img_form_system_theme_settings_alter(&$form, &$form_state) {
+  if (isset($form_state['build_info']['args'][0]) && ($theme_key = $form_state['build_info']['args'][0])) {
+    $themes = list_themes();
+    if (isset($themes[$theme_key]->info['resp_img'])) {
+      array_unshift($form['#submit'], 'resp_img_form_system_theme_settings_submit');
+
+      $theme_settings = $themes[$theme_key]->info['resp_img'];
+      $saved_settings = theme_get_setting('resp_img', $theme_key);
+
+      $form['resp_img_fs'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Suffixes and breakpoints'),
+        '#weight' => -1,
+        '#tree' => TRUE,
+      );
+      $form['resp_img_fs']['resp_img_use_default'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Use the default settings'),
+        '#default_value' => theme_get_setting('resp_img_use_default', $theme_key),
+      );
+      $form['resp_img_fs']['resp_img'] = array(
+        '#type' => 'container',
+        '#states' => array(
+          'invisible' => array(
+            'input[name="resp_img_fs[resp_img_use_default]"]' => array('checked' => TRUE),
+          ),
+        ),
+      );
+      foreach ($theme_settings as $key => $value) {
+        $form['resp_img_fs']['resp_img'][$key] = array(
+          '#type' => 'checkbox',
+          '#title' => $key . ' (' . $value . ')',
+          '#default_value' => $saved_settings[$key],
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Save settings, alter structure first().
+ */
+function resp_img_form_system_theme_settings_submit($form, &$form_state) {
+  $form_state['values'] += $form_state['values']['resp_img_fs'];
+  unset($form_state['values']['resp_img_fs']);
+}

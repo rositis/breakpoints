@@ -12,7 +12,6 @@ function resp_img_admin_suffixes() {
     '#theme' => 'table',
     '#header' => array(
       t('Name'),
-      t('Suffix'),
       t('Breakpoint'),
       t('Operations'),
     ),
@@ -27,41 +26,34 @@ function resp_img_admin_suffixes() {
       '#disabled' => TRUE,
       '#size' => 20,
     );
-    $cell_suffix = array(
-      '#id' => 'suffix-' . $suffix->name,
-      '#type' => 'textfield',
-      '#default_value' => $suffix->suffix,
-      '#size' => 20,
-    );
     $cell_breakpoint = array(
       '#id' => 'breakpoint-' . $suffix->name,
       '#type' => 'textfield',
       '#default_value' => $suffix->breakpoint,
+      '#disabled' => $suffix->source === 'theme',
       '#size' => 20,
     );
     $cell_remove = array(
       '#id' => 'remove-' . $suffix->name,
       '#type' => 'submit',
       '#value' => 'Remove',
+      '#disabled' => $suffix->source === 'theme',
       '#submit' => array('resp_img_admin_suffixes_remove'),
     );
 
     $form['suffixes'][] = array(
       'name' => &$cell_name,
-      'suffix' => &$cell_suffix,
       'breakpoint' => &$cell_breakpoint,
       'remove' => &$cell_remove,
     );
 
     $form['suffixes']['#rows'][] = array(
       array('data' => &$cell_name),
-      array('data' => &$cell_suffix),
       array('data' => &$cell_breakpoint),
       array('data' => &$cell_remove),
     );
 
     unset($cell_name);
-    unset($cell_suffix);
     unset($cell_breakpoint);
     unset($cell_remove);
 
@@ -70,12 +62,6 @@ function resp_img_admin_suffixes() {
   // Add empty row
   $cell_name = array(
     '#id' => 'name-' . 'empty',
-    '#type' => 'textfield',
-    '#default_value' => '',
-    '#size' => 20,
-  );
-  $cell_suffix = array(
-    '#id' => 'suffix-' . 'empty',
     '#type' => 'textfield',
     '#default_value' => '',
     '#size' => 20,
@@ -89,19 +75,16 @@ function resp_img_admin_suffixes() {
 
   $form['suffixes'][] = array(
     'name' => &$cell_name,
-    'suffix' => &$cell_suffix,
     'breakpoint' => &$cell_breakpoint,
   );
 
   $form['suffixes']['#rows'][] = array(
     array('data' => &$cell_name),
-    array('data' => &$cell_suffix),
     array('data' => &$cell_breakpoint),
     array('data' => ''),
   );
 
   unset($cell_name);
-  unset($cell_suffix);
   unset($cell_breakpoint);
   unset($cell_remove);
 
@@ -123,30 +106,18 @@ function resp_img_admin_suffixes_validate($form, &$form_state) {
   if (strpos($form_state['triggering_element']['#id'], 'remove') === FALSE) {
     $suffixes = $form_state['values']['suffixes'];
     if (!empty($suffixes)) {
-      $unique = array(
-        'names' => array(),
-        'suffixes' => array(),
-      );
+      $unique = array();
       foreach ($suffixes as $key => $suffixdata) {
         if (!empty($suffixdata['name'])) {
           // Name has to be unique.
-          if (array_key_exists($suffixdata['name'], $unique['names'])) {
+          if (array_key_exists($suffixdata['name'], $unique)) {
             form_set_error('suffixes][' . $key . '][name', 'Not unique');
-          }
-          // Suffix is required.
-          if (empty($suffixdata['suffix'])) {
-            form_set_error('suffixes][' . $key . '][suffix', 'Required');
-          }
-          // Suffix has to be unique.
-          elseif (array_key_exists($suffixdata['suffix'], $unique['suffixes'])) {
-            form_set_error('suffixes][' . $key . '][suffix', 'Not unique');
           }
           // Breakpoint is required.
           if (empty($suffixdata['breakpoint']) && $suffixdata['breakpoint'] !== '0') {
             form_set_error('suffixes][' . $key . '][breakpoint', 'Required');
           }
-          $unique['names'][$suffixdata['name']] = TRUE;
-          $unique['suffixes'][$suffixdata['suffix']] = TRUE;
+          $unique[$suffixdata['name']] = TRUE;
         }
       }
     }
@@ -160,15 +131,15 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
       if (!empty($suffixdata['name'])) {
         $suffix = resp_img_suffix_load('resp_img.' . $suffixdata['name']);
         if ($suffix) {
-          $suffix->suffix = $suffixdata['suffix'];
           $suffix->breakpoint = $suffixdata['breakpoint'];
           resp_img_suffix_save($suffix);
         }
         else {
           $suffix = new StdClass();
           $suffix->name = $suffixdata['name'];
-          $suffix->suffix = $suffixdata['suffix'];
+          $suffix->suffix = '__' . $suffix->name;
           $suffix->breakpoint = $suffixdata['breakpoint'];
+          $suffix->source = 'user';
           resp_img_suffix_save($suffix);
         }
       }
@@ -256,10 +227,12 @@ function resp_img_admin_loadfromtheme_submit($form, &$form_state) {
         $suffix->name = $name;
         $suffix->suffix = '__' . $name;
         $suffix->breakpoint = $breakpoint;
+        $suffix->source = 'theme';
         resp_img_suffix_save($suffix);
       }
     }
   }
+  system_theme_settings();
 }
 
 function resp_img_add_style_form($form, &$form_state) {
