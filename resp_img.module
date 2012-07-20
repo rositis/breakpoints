@@ -247,7 +247,7 @@ function theme_picture($variables) {
   foreach ($suffixes as $suffix) {
     // detect the default one
     if ($suffix->suffix == $default_suffix) {
-      $images[0] = array(
+      $images[$suffix->breakpoint] = array(
         'image' => theme_image_style($variables),
       );
     }
@@ -261,6 +261,7 @@ function theme_picture($variables) {
     }
   }
   // sort by size
+  // @todo: how to handle mix of em and px?
   asort($images);
 
   // add variants to the output
