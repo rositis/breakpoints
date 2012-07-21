@@ -40,7 +40,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
     '#theme' => 'table',
     '#header' => array(
       t('Name'),
-      t('Breakpoint'),
+      t('Breakpoint, @media ...'),
       array('data' => t('Operations'), 'colspan' => 2),
     ),
   );
@@ -59,7 +59,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
       '#type' => 'textfield',
       '#default_value' => $suffix->breakpoint,
       '#disabled' => $suffix->source === 'theme',
-      '#size' => 20,
+      '#size' => 80,
     );
     $cell_remove = array(
       '#id' => 'remove-' . $suffix->name,
@@ -107,7 +107,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
     '#id' => 'breakpoint-' . 'empty',
     '#type' => 'textfield',
     '#default_value' => '',
-    '#size' => 20,
+    '#size' => 80,
   );
 
   $form['suffixes'][] = array(

@@ -198,7 +198,7 @@ function resp_img_suffix_load_all_fromtheme($theme_key) {
 /**
  * Load all enabled suffixes from the theme
  */
-function resp_img_suffix_load_all_active_from_theme($theme_key) {
+function resp_img_suffix_load_all_active_from_theme($theme_key = '') {
   $suffixes = resp_img_suffix_load_all_fromtheme($theme_key);
   $enabled = array();
   if (!empty($suffixes)) {
@@ -289,6 +289,33 @@ function resp_img_theme() {
 }
 
 /**
+ * Implements hook_field_formatter_prepare_view().
+ */
+function resp_img_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items, $displays) {
+  dpm($items, 'resp_img_field_formatter_prepare_view');
+}
+
+/**
+ * Implements hook_preprocess_field().
+ */
+function resp_img_preprocess_field(&$variables, $hook) {
+  $element = $variables['element'];
+  if ($element['#field_type'] == 'image') {
+    // @todo:
+    // Load display settings
+    // Check for resp_img_default
+    // No selection => use suffixes
+    // Otherwise use selection
+    // Switch theme function
+    $num_fields = count($element['#items']);
+    for ($delta = 0; $delta < $num_fields; $delta++) {
+        // Switch theme function
+    }
+  }
+  dpm($element, 'element');
+}
+
+/**
  * Custom hook_image_style().
  * @see resp_img_theme_registry_alter
  */
@@ -337,7 +364,7 @@ function theme_picture($variables) {
       if (array_key_exists($new_image['style_name'], $image_styles)) {
         $images[$suffix->breakpoint] = array(
           'image' => theme_image_style($new_image),
-          'media' => '(min-width: ' . $suffix->breakpoint . ')',
+          'media' => $suffix->breakpoint,
         );
       }
     }
@@ -370,6 +397,7 @@ function theme_picture($variables) {
  * @see resp_img_theme_registry_alter
  */
 function _resp_img_pp_image_style($variables) {
+  dpm($variables, '_resp_img_pp_image_style');
   $default_suffix = resp_img_suffix_default();
   if (strpos($variables['style_name'], $default_suffix) !== FALSE) {
     // add javascript
@@ -562,3 +590,63 @@ function resp_img_form_system_theme_settings_submit($form, &$form_state) {
   unset($form_state['values']['resp_img']['resp_img_default_suffix']);
   unset($form_state['values']['resp_img_fs']);
 }
+
+/**
+ * cf cs_adaptive_image
+ */
+
+/**
+ * Implements hook_field_formatter_info_alter().
+ */
+function resp_img_field_formatter_info_alter(&$info) {
+  dpm($info, 'info');
+  foreach ($info as $formatter_key => &$formatter) {
+    if (!isset($formatter['settings']) || !is_array($formatter['settings'])) {
+      $formatter['settings'] = array();
+    }
+    $formatter['settings'] += array(
+      'resp_img_default' => '',
+      'resp_img' => array(),
+    );
+  }
+}
+
+/**
+ * Implements hook_field_formatter_settings_form_alter().
+ */
+function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $context) {
+  dpm($element);
+  if (isset($context['field']['type']) && $context['field']['type'] === 'image') {
+    // Add a fake responsive style
+    $options = $element['image_style']['#options'];
+    $element['image_style']['#options'] = array_merge(array('_responsive' => 'Responsive'), $options);
+    $settings = $context['instance']['display'][$context['view_mode']]['settings'];
+    $theme_suffixes = resp_img_suffix_load_all_active();
+    if (!empty($theme_suffixes)) {
+      $element['resp_img_default'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Go responsive'),
+        '#default_value' => isset($settings['resp_img_default']) ? $settings['resp_img_default'] : FALSE,
+      );
+
+      $image_styles = image_style_options(TRUE);
+      foreach ($theme_suffixes as $suffix) {
+        $label = $suffix->name . ' [' . $suffix->breakpoint . ']';
+        $element['resp_img']['style-' . $suffix->name] = array(
+          '#title' => $label,
+          '#type' => 'select',
+          '#options' => $image_styles,
+          '#default_value' => isset($settings['resp_img']['style-' . $suffix->name]) ? $settings['resp_img']['style-' . $suffix->name] : '',
+        );
+
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary_alter().
+ */
+function resp_img_field_formatter_settings_summary_alter(&$summary, $context) {
+}
+
