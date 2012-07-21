@@ -223,7 +223,6 @@ function resp_img_suffix_load_all_active_from_theme($theme_key = '') {
  */
 function resp_img_suffix_load_from_theme($name, $theme_key = '') {
   $suffixes = resp_img_suffix_load_all_fromtheme($theme_key);
-  dpm($suffixes);
   if (array_key_exists($name, $suffixes)) {
     return $suffixes[$name];
   }
@@ -273,23 +272,6 @@ function resp_img_add_js() {
     drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/matchmedia.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
     drupal_add_js(drupal_get_path('module', 'resp_img') . '/picturefill/picturefill.js', array('type' => 'file', 'weight' => -10, 'group' => JS_DEFAULT));
     drupal_add_css(drupal_get_path('module', 'resp_img') . '/resp_img.css', array('type' => 'file', 'weight' => -10));
-  }
-}
-
-/**
- * Implements hook_theme_registry_alter().
- */
-function resp_img_theme_registry_alter(&$theme_registry) {
-  foreach ($theme_registry as $key => $info) {
-    if ($key == 'image_style') {
-      dpm($theme_registry[$key]);
-//      $theme_registry[$key]['function'] = '_resp_img_pp_image_style';
-    }
-    elseif ($key == 'image_formatter') {
-      dpm($theme_registry[$key], 'image_formatter');
-      //$theme_registry[$key]['variables']['breakpoints'] = array();
-      //$theme_registry[$key]['function'] = 'theme_picture_formatter';
-    }
   }
 }
 
@@ -360,7 +342,6 @@ function resp_img_field_attach_view_alter(&$output, $context) {
 }
 
 function theme_picture_formatter($variables) {
-  dpm($variables, 'theme_picture_formatter');
   if (!isset($variables['breakpoints']) || empty($variables['breakpoints'])) {
     return theme_image_formatter($variables);
   }
@@ -405,7 +386,6 @@ function theme_picture_formatter($variables) {
  * @see resp_img_theme_registry_alter
  */
 function theme_picture($variables) {
-  dpm($variables, 'theme_picture');
   // add class so we know it got processed.
   if (!isset($variables['attributes'])) {
     $variables['attributes'] = array();
@@ -496,7 +476,6 @@ function theme_picture($variables) {
   // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
   $output[] = '<noscript>' . $images[0]['image'] . '</noscript>';
   $output[] = '</picture>';
-  dpm($output);
   return implode("\n", $output);
 }
 
@@ -505,7 +484,6 @@ function theme_picture($variables) {
  * @see resp_img_theme_registry_alter
  */
 function _resp_img_pp_image_style($variables) {
-  dpm($variables, '_resp_img_pp_image_style');
   $default_suffix = resp_img_suffix_default();
   if (strpos($variables['style_name'], $default_suffix) !== FALSE) {
     // add javascript
@@ -516,10 +494,6 @@ function _resp_img_pp_image_style($variables) {
     $output = theme_image_style($variables);
   }
   return $output;
-}
-
-function _resp_img_pp_image_style_direct($variables) {
-  dpm($variables, '_resp_img_pp_image_style_direct');
 }
 
 /**
@@ -715,13 +689,12 @@ function resp_img_form_system_theme_settings_submit($form, &$form_state) {
  * Implements hook_field_formatter_info_alter().
  */
 function resp_img_field_formatter_info_alter(&$info) {
-  dpm($info, 'info');
   foreach ($info as $formatter_key => &$formatter) {
     if (!isset($formatter['settings']) || !is_array($formatter['settings'])) {
       $formatter['settings'] = array();
     }
     $formatter['settings'] += array(
-      'resp_img_responsive' => '',
+      'resp_img_responsive' => FALSE,
       'resp_img' => array(),
     );
   }
@@ -731,11 +704,7 @@ function resp_img_field_formatter_info_alter(&$info) {
  * Implements hook_field_formatter_settings_form_alter().
  */
 function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $context) {
-  dpm($element);
   if (isset($context['field']['type']) && $context['field']['type'] === 'image') {
-    // Add a fake responsive style
-    $options = $element['image_style']['#options'];
-    $element['image_style']['#options'] = array_merge(array('_responsive' => 'Responsive'), $options);
     $settings = $context['instance']['display'][$context['view_mode']]['settings'];
     $theme_suffixes = resp_img_suffix_load_all_active();
     if (!empty($theme_suffixes)) {
