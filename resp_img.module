@@ -172,7 +172,10 @@ function resp_img_suffix_load_all_userdefined() {
 /**
  * Load all suffixes from the theme.
  */
-function resp_img_suffix_load_all_fromtheme($theme_key) {
+function resp_img_suffix_load_all_fromtheme($theme_key = '') {
+  if ($theme_key == '') {
+    $theme_key = variable_get('theme_default', 'stark');
+  }
   $suffixes = array();
   $themes = list_themes();
   if (isset($themes[$theme_key]->info['resp_img'])) {
@@ -200,6 +203,9 @@ function resp_img_suffix_load_all_fromtheme($theme_key) {
  * Load all enabled suffixes from the theme
  */
 function resp_img_suffix_load_all_active_from_theme($theme_key = '') {
+  if ($theme_key == '') {
+    $theme_key = variable_get('theme_default', 'stark');
+  }
   $suffixes = resp_img_suffix_load_all_fromtheme($theme_key);
   $enabled = array();
   if (!empty($suffixes)) {
@@ -212,6 +218,17 @@ function resp_img_suffix_load_all_active_from_theme($theme_key = '') {
   return $enabled;
 }
 
+/**
+ * Load suffix from the theme
+ */
+function resp_img_suffix_load_from_theme($name, $theme_key = '') {
+  $suffixes = resp_img_suffix_load_all_fromtheme($theme_key);
+  dpm($suffixes);
+  if (array_key_exists($name, $suffixes)) {
+    return $suffixes[$name];
+  }
+  return FALSE;
+}
 /**
 * Save a single suffix
 */
@@ -443,7 +460,22 @@ function theme_picture($variables) {
   }
   // Use mapped styles by hand.
   else {
+    $images[] = array(
+      'image' => theme_image_style($variables),
+    );
+    foreach ($variables['breakpoints'] as $suffix_name => $image_style) {
+      $suffix = resp_img_suffix_load('resp_img.' . $suffix_name);
+      if (!$suffix) {
+        $suffix = resp_img_suffix_load_from_theme(RESP_IMG_SEPARATOR . $suffix_name);
+      }
+      $new_image = $variables;
+      $new_image['style_name'] = $image_style;
+      $images[] = array(
+        'image' => theme_image_style($new_image),
+        'media' => $suffix->breakpoint,
+      );
 
+    }
   }
 
   $output[] = '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
