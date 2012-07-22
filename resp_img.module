@@ -742,5 +742,11 @@ function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $
  * Implements hook_field_formatter_settings_summary_alter().
  */
 function resp_img_field_formatter_settings_summary_alter(&$summary, $context) {
+  if (isset($context['field']['type']) && $context['field']['type'] === 'image') {
+    $settings = $context['instance']['display'][$context['view_mode']]['settings'];
+    if (isset($settings['resp_img_responsive']) && $settings['resp_img_responsive']) {
+      $summary .= '<br>Responsive mode activated';
+    }
+  }
 }
 
