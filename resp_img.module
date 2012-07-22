@@ -713,6 +713,15 @@ function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $
         '#title' => t('Go responsive'),
         '#default_value' => isset($settings['resp_img_responsive']) ? $settings['resp_img_responsive'] : FALSE,
       );
+      drupal_add_library('system', 'drupal.states');
+      $element['resp_img'] = array(
+        '#type' => 'container',
+        '#states' => array(
+          'invisible' => array(
+            'input[name="fields[field_image][settings_edit_form][settings][resp_img_responsive]"]' => array('checked' => FALSE),
+          ),
+        ),
+      );
 
       $image_styles = image_style_options(TRUE);
       foreach ($theme_suffixes as $suffix) {
