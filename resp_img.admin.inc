@@ -5,6 +5,9 @@
  * Admin settings
  */
 
+/**
+ * Admin form
+ */
 function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
   if ($theme_key == '') {
     $theme_key = variable_get('theme_default', 'stark');
@@ -14,65 +17,53 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
   $form['suffixes'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
+    '#theme_key' => $theme_key,
     '#theme' => 'resp_img_admin_suffixes_table',
   );
 
-  $suffixes = resp_img_suffix_load_all_userdefined();
-  foreach ($suffixes as $suffix) {
-    $cell_name = array(
-      '#id' => 'name-' . $suffix->name,
-      '#type' => 'textfield',
-      '#default_value' => $suffix->name,
-      '#disabled' => TRUE,
-      '#size' => 20,
-    );
-    $cell_breakpoint = array(
-      '#id' => 'breakpoint-' . $suffix->name,
-      '#type' => 'textfield',
-      '#default_value' => $suffix->breakpoint,
-      '#disabled' => $suffix->source === 'theme',
-      '#size' => 80,
-    );
-    $cell_weight = array(
-      '#id' => 'weight-' . $suffix->name,
-      '#type' => 'textfield',
-      '#size' => 4,
-      '#default_value' => isset($suffix->weight) ? $suffix->weight : 0,
-      '#attributes' => array('class' => array('suffixes-weight')),
-    );
-
-    $form['suffixes'][$suffix->name] = array(
-      'name' => $cell_name,
-      'breakpoint' => $cell_breakpoint,
-      'weight' => $cell_weight,
+  $suffixes = resp_img_suffix_load_all($theme_key);
+  foreach ($suffixes as $key => $suffix) {
+    $form['suffixes'][$key] = array(
+      '#suffix_data' => $suffix,
+      'name' => array(
+        '#type' => 'textfield',
+        '#default_value' => $suffix->name,
+        '#disabled' => TRUE,
+        '#size' => 20,
+      ),
+      'breakpoint' => array(
+        '#type' => 'textfield',
+        '#default_value' => $suffix->breakpoint,
+        '#disabled' => $suffix->source === 'theme',
+        '#size' => 60,
+      ),
+      'weight' => array(
+        '#type' => 'textfield',
+        '#size' => 4,
+        '#default_value' => isset($suffix->weight) ? $suffix->weight : 0,
+        '#attributes' => array('class' => array('suffixes-weight')),
+      ),
     );
   }
 
   // Add empty row
-  $cell_name = array(
-    '#id' => 'name-' . 'empty',
-    '#type' => 'textfield',
-    '#default_value' => '',
-    '#size' => 20,
-  );
-  $cell_breakpoint = array(
-    '#id' => 'breakpoint-' . 'empty',
-    '#type' => 'textfield',
-    '#default_value' => '',
-    '#size' => 80,
-  );
-  $cell_weight = array(
-    '#id' => 'weight-' . 'empty',
-    '#type' => 'textfield',
-    '#size' => 4,
-    '#default_value' => 0,
-    '#attributes' => array('class' => array('suffixes-weight')),
-  );
-
   $form['suffixes']['new'] = array(
-    'name' => $cell_name,
-    'breakpoint' => $cell_breakpoint,
-    'weight' => $cell_weight,
+    'name' => array(
+      '#type' => 'textfield',
+      '#default_value' => '',
+      '#size' => 20,
+    ),
+    'breakpoint' => array(
+      '#type' => 'textfield',
+      '#default_value' => '',
+      '#size' => 60,
+    ),
+    'weight' => array(
+      '#type' => 'textfield',
+      '#size' => 4,
+      '#default_value' => 0,
+      '#attributes' => array('class' => array('suffixes-weight')),
+    ),
   );
 
   // Buttons
@@ -93,7 +84,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
  * Theme form as table.
  */
 function theme_resp_img_admin_suffixes_table($variables) {
-  dpm($variables);
+  drupal_add_css(drupal_get_path('module', 'resp_img') . '/css/resp_img.admin.css');
   $form = $variables['form'];
   $rows = array();
   $link_attributes = array(
@@ -106,18 +97,38 @@ function theme_resp_img_admin_suffixes_table($variables) {
     $row = array();
     $row[] = drupal_render($form[$key]['name']);
     $row[] = drupal_render($form[$key]['breakpoint']);
-    $row[] = l(t('toggle'), 'admin/config/media/resp_img/toggle/' . $key, $link_attributes);
-    $row[] = l(t('delete'), 'admin/config/media/resp_img/delete/' . $key, $link_attributes);
+    if ($key != 'new') {
+      $suffix = $form[$key]['#suffix_data'];
+      $row[] = $suffix->source . ' (' . $suffix->source_type . ')';
+      $row[] = $suffix->status ? t('Enabled') : t('Disabled');
+      $row[] = l($suffix->status ? t('Disable') : t('Enable'), 'admin/config/media/resp_img/' . $form['#theme_key'] . '/' . ($suffix->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
+      if ($suffix->source == 'user') {
+        $row[] = l(t('Delete'), 'admin/config/media/resp_img/' . $form['#theme_key'] . '/delete/' . $key, $link_attributes);
+      }
+      else {
+        $row[] = '';
+      }
+      $class= 'resp-img-status-' . ($suffix->status ? 'enabled' : 'disabled');
+    }
+    else {
+      $row[] = '';
+      $row[] = '';
+      $row[] = '';
+      $row[] = '';
+      $class = 'resp-img-status-new';
+    }
     $row[] = drupal_render($form[$key]['weight']);
     $rows[] = array(
       'data' => $row,
-      'class' => array('draggable'),
+      'class' => array('draggable', $class),
     );
    }
 
   $header =  array(
     t('Name'),
     t('Breakpoint, @media ...'),
+    t('Source'),
+    t('Status'),
     array('data' => t('Operations'), 'colspan' => 2),
     t('Weight'),
   );
@@ -128,17 +139,9 @@ function theme_resp_img_admin_suffixes_table($variables) {
   return $output;
 }
 
-function resp_img_admin_suffixes_remove($form, &$form_state) {
-  $name = substr($form_state['triggering_element']['#id'], strlen('remove-'));
-  dpm($form_state, $name);
-  //resp_img_suffix_delete('resp_img.' . $name);
-}
-
-function resp_img_admin_suffixes_enabledisable($form, &$form_state) {
-  $name = substr($form_state['triggering_element']['#id'], strlen('enable-'));
-  resp_img_suffix_toggle_status('resp_img.' . $name);
-}
-
+/**
+ * Admin form validation.
+ */
 function resp_img_admin_suffixes_validate($form, &$form_state) {
   if (strpos($form_state['triggering_element']['#id'], 'remove') === FALSE) {
     $suffixes = $form_state['values']['suffixes'];
@@ -146,10 +149,6 @@ function resp_img_admin_suffixes_validate($form, &$form_state) {
       $unique = array();
       foreach ($suffixes as $key => $suffixdata) {
         if (!empty($suffixdata['name'])) {
-          // Name has to be unique.
-          if (array_key_exists($suffixdata['name'], $unique)) {
-            form_set_error('suffixes][' . $key . '][name', 'Not unique');
-          }
           // Breakpoint is required.
           if (empty($suffixdata['breakpoint']) && $suffixdata['breakpoint'] !== '0') {
             form_set_error('suffixes][' . $key . '][breakpoint', 'Required');
@@ -161,12 +160,15 @@ function resp_img_admin_suffixes_validate($form, &$form_state) {
   }
 }
 
+/**
+ * Admin form submit.
+ */
 function resp_img_admin_suffixes_submit($form, &$form_state) {
   $suffixes = $form_state['values']['suffixes'];
   if (!empty($suffixes)) {
-    foreach ($suffixes as $suffixdata) {
+    foreach ($suffixes as $suffixname => $suffixdata) {
       if (!empty($suffixdata['name'])) {
-        $suffix = resp_img_suffix_load('resp_img.' . $suffixdata['name']);
+        $suffix = resp_img_suffix_load_by_fullkey($suffixname);
         if ($suffix) {
           $suffix->breakpoint = $suffixdata['breakpoint'];
           $suffix->weight = $suffixdata['weight'];
@@ -178,6 +180,8 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
           $suffix->suffix = RESP_IMG_SEPARATOR . $suffix->name;
           $suffix->breakpoint = $suffixdata['breakpoint'];
           $suffix->source = 'user';
+          $suffix->source_type = 'custom';
+          $suffix->theme = $form_state['complete_form']['suffixes']['#theme_key'];
           $suffix->weight = $suffixdata['weight'];
           $suffix->status = TRUE;
           resp_img_suffix_save($suffix);
@@ -187,92 +191,38 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
   }
 }
 
-function resp_img_admin_settings() {
-  $form = array();
-  $config = resp_img_settings();
-
-  $suffixes = resp_img_suffix_load_all();
-  $options = array();
-  foreach ($suffixes as $suffix) {
-    $options[$suffix->suffix] = $suffix->name . ' (' . $suffix->suffix . ')';
-  }
-
-  $form['resp_img_default_suffix'] = array(
-    '#type' => 'select',
-    '#title' => t('Default suffix'),
-    '#description' => t('Specify the default suffix to use, ex. "_mobile". Make sure you also create the corresponding imagestyles.'),
-    '#options' => $options,
-    '#required' => TRUE,
-    '#default_value' => $config->default_suffix,
-  );
-
-  $form['resp_img_block_enabled'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Enable responsive images for blocks.'),
-    '#description' => t('If checked, the images within blocks will be responsive as well.'),
-    '#default_value' => $config->block_enabled,
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save'),
-  );
-  return $form;
+/**
+ * Admin action form: enable, disable, delete
+ */
+function resp_img_admin_suffix_actions_form($form, &$form_state, $theme_key, $action, $breakpoint) {
+  $form_state['theme_key'] = $theme_key;
+  $form_state['action'] = $action;
+  $form_state['breakpoint'] = $breakpoint;
+  $question = t('Are you sure you want to %action %breakpoint', array(
+    '%action' => $action,
+    '%breakpoint' => $breakpoint,
+  ));
+  $path = 'admin/config/media/resp_img/' . $theme_key;
+  return confirm_form($form, $question, $path, '');
 }
 
-function resp_img_admin_settings_submit($form, &$form_state) {
-  resp_img_settings_save(
-    check_plain($form_state['values']['resp_img_default_suffix']),
-    $form_state['values']['resp_img_block_enabled']
-  );
-}
-
-function resp_img_admin_loadfromtheme($form, &$form_state) {
-  $enabled_themes = array();
-  foreach(list_themes() as $key => $theme) {
-    if ($theme->status) {
-      $enabled_themes[$key] = $theme->info['name'];
-    }
+/**
+ * Admin action form submit
+ */
+function resp_img_admin_suffix_actions_form_submit($form, &$form_state) {
+  $theme_key = $form_state['theme_key'];
+  $action = $form_state['action'];
+  $breakpoint = $form_state['breakpoint'];
+  switch ($action) {
+    case 'delete':
+      resp_img_suffix_delete($breakpoint);
+      break;
+    case 'enable':
+    case 'disable':
+      resp_img_suffix_toggle_status($breakpoint);
+      break;
   }
-  $form['theme'] = array(
-    '#title' => t('Select theme'),
-    '#type' => 'select',
-    '#options' => $enabled_themes,
-    '#required' => TRUE,
-    '#description' => t('Read the breakpoints from this theme and create the suffixes'),
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Create'),
-  );
-  return $form;
-
-}
-
-function resp_img_admin_loadfromtheme_validate($form, &$form_state) {
-  if (empty($form_state['values']['theme'])) {
-    form_set_error('theme', 'Please select a theme');
-  }
-}
-
-function resp_img_admin_loadfromtheme_submit($form, &$form_state) {
-  $themes = list_themes();
-  $theme = $form_state['values']['theme'];
-  if (isset($themes[$theme]->info['resp_img'])) {
-    $breakpoints = $themes[$theme]->info['resp_img'];
-    foreach ($breakpoints as $name => $breakpoint) {
-      if (!resp_img_suffix_load($name)) {
-        $suffix = new StdClass();
-        $suffix->name = $name;
-        $suffix->suffix = RESP_IMG_SEPARATOR . $name;
-        $suffix->breakpoint = $breakpoint;
-        $suffix->source = 'theme';
-        resp_img_suffix_save($suffix);
-      }
-    }
-  }
-  system_theme_settings();
+  $form_state['redirect'] = 'admin/config/media/resp_img/' . $theme_key;
 }
 
 function resp_img_add_style_form($form, &$form_state) {
