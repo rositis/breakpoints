@@ -11,38 +11,10 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
   }
   $form = array();
 
-  // Suffixes defined by the theme
-  $theme_suffixes = resp_img_suffix_load_all_active_from_theme($theme_key);
-  if (!empty($theme_suffixes)) {
-    $rows = array();
-    foreach ($theme_suffixes as $suffix) {
-      $rows[] = array(
-        $suffix->name,
-        $suffix->breakpoint,
-      );
-    }
-    $form['theme_suffixes'] = array(
-      '#tree' => TRUE,
-      '#caption' => 'Active suffixes from the theme.',
-      '#theme' => 'table',
-      '#header' => array(
-        t('Name'),
-        t('Breakpoint'),
-      ),
-      '#rows' => $rows,
-    );
-  }
-
-
   $form['suffixes'] = array(
+    '#type' => 'container',
     '#tree' => TRUE,
-    '#caption' => 'Suffixes defined by module or user.',
-    '#theme' => 'table',
-    '#header' => array(
-      t('Name'),
-      t('Breakpoint, @media ...'),
-      array('data' => t('Operations'), 'colspan' => 2),
-    ),
+    '#theme' => 'resp_img_admin_suffixes_table',
   );
 
   $suffixes = resp_img_suffix_load_all_userdefined();
@@ -61,39 +33,19 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
       '#disabled' => $suffix->source === 'theme',
       '#size' => 80,
     );
-    $cell_remove = array(
-      '#id' => 'remove-' . $suffix->name,
-      '#type' => 'submit',
-      '#value' => 'Remove',
-      '#disabled' => $suffix->source === 'theme',
-      '#submit' => array('resp_img_admin_suffixes_remove'),
-    );
-    $cell_enable = array(
-      '#id' => 'enable-' . $suffix->name,
-      '#type' => 'submit',
-      '#value' => $suffix->status ? 'Disable' : 'Enable',
-      '#submit' => array('resp_img_admin_suffixes_enabledisable'),
+    $cell_weight = array(
+      '#id' => 'weight-' . $suffix->name,
+      '#type' => 'textfield',
+      '#size' => 4,
+      '#default_value' => isset($suffix->weight) ? $suffix->weight : 0,
+      '#attributes' => array('class' => array('suffixes-weight')),
     );
 
-    $form['suffixes'][] = array(
-      'name' => &$cell_name,
-      'breakpoint' => &$cell_breakpoint,
-      'remove' => &$cell_remove,
-      'enable' => &$cell_enable,
+    $form['suffixes'][$suffix->name] = array(
+      'name' => $cell_name,
+      'breakpoint' => $cell_breakpoint,
+      'weight' => $cell_weight,
     );
-
-    $form['suffixes']['#rows'][] = array(
-      array('data' => &$cell_name),
-      array('data' => &$cell_breakpoint),
-      array('data' => &$cell_remove),
-      array('data' => &$cell_enable),
-    );
-
-    unset($cell_name);
-    unset($cell_breakpoint);
-    unset($cell_remove);
-    unset($cell_enable);
-
   }
 
   // Add empty row
@@ -109,21 +61,24 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
     '#default_value' => '',
     '#size' => 80,
   );
-
-  $form['suffixes'][] = array(
-    'name' => &$cell_name,
-    'breakpoint' => &$cell_breakpoint,
+  $cell_weight = array(
+    '#id' => 'weight-' . 'empty',
+    '#type' => 'textfield',
+    '#size' => 4,
+    '#default_value' => 0,
+    '#attributes' => array('class' => array('suffixes-weight')),
   );
 
-  $form['suffixes']['#rows'][] = array(
-    array('data' => &$cell_name),
-    array('data' => &$cell_breakpoint),
-    array('data' => '', 'colspan' => 2),
+  $form['suffixes']['new'] = array(
+    'name' => $cell_name,
+    'breakpoint' => $cell_breakpoint,
+    'weight' => $cell_weight,
   );
 
-  unset($cell_name);
-  unset($cell_breakpoint);
-  unset($cell_remove);
+  // Buttons
+  $form['buttons'] = array(
+    '#type' => 'container',
+  );
 
   // Submit button
   $form['submit'] = array(
@@ -134,13 +89,53 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
   return $form;
 }
 
+/**
+ * Theme form as table.
+ */
+function theme_resp_img_admin_suffixes_table($variables) {
+  dpm($variables);
+  $form = $variables['form'];
+  $rows = array();
+  $link_attributes = array(
+    'attributes' => array(
+      'class' => array('image-style-link'),
+    ),
+  );
+  foreach (element_children($form) as $key) {
+    $form[$key]['weight']['#attributes']['class'] = array('suffixes-weight');
+    $row = array();
+    $row[] = drupal_render($form[$key]['name']);
+    $row[] = drupal_render($form[$key]['breakpoint']);
+    $row[] = l(t('toggle'), 'admin/config/media/resp_img/toggle/' . $key, $link_attributes);
+    $row[] = l(t('delete'), 'admin/config/media/resp_img/delete/' . $key, $link_attributes);
+    $row[] = drupal_render($form[$key]['weight']);
+    $rows[] = array(
+      'data' => $row,
+      'class' => array('draggable'),
+    );
+   }
+
+  $header =  array(
+    t('Name'),
+    t('Breakpoint, @media ...'),
+    array('data' => t('Operations'), 'colspan' => 2),
+    t('Weight'),
+  );
+
+  $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-suffixes')));
+  drupal_add_tabledrag('resp-img-suffixes', 'order', 'sibling', 'suffixes-weight');
+
+  return $output;
+}
+
 function resp_img_admin_suffixes_remove($form, &$form_state) {
   $name = substr($form_state['triggering_element']['#id'], strlen('remove-'));
-  resp_img_suffix_delete('resp_img.' . $name);
+  dpm($form_state, $name);
+  //resp_img_suffix_delete('resp_img.' . $name);
 }
 
 function resp_img_admin_suffixes_enabledisable($form, &$form_state) {
-  $name = substr($form_state['triggering_element']['#id'], strlen('remove-'));
+  $name = substr($form_state['triggering_element']['#id'], strlen('enable-'));
   resp_img_suffix_toggle_status('resp_img.' . $name);
 }
 
@@ -174,6 +169,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
         $suffix = resp_img_suffix_load('resp_img.' . $suffixdata['name']);
         if ($suffix) {
           $suffix->breakpoint = $suffixdata['breakpoint'];
+          $suffix->weight = $suffixdata['weight'];
           resp_img_suffix_save($suffix);
         }
         else {
@@ -182,6 +178,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
           $suffix->suffix = RESP_IMG_SEPARATOR . $suffix->name;
           $suffix->breakpoint = $suffixdata['breakpoint'];
           $suffix->source = 'user';
+          $suffix->weight = $suffixdata['weight'];
           $suffix->status = TRUE;
           resp_img_suffix_save($suffix);
         }
