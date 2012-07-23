@@ -1,0 +1,6 @@
+name: mobile
+suffix: __mobile
+breakpoint: '(min-width: 0px)'
+source_type: module
+source: resp_img
+status: FALSE
