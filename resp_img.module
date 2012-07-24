@@ -332,8 +332,8 @@ function resp_img_suffix_save($resp_img_suffix) {
 }
 
 /**
-* Delete a single suffix.
-*/
+ * Delete a single suffix.
+ */
 function resp_img_suffix_delete($resp_img_suffix, $theme_key = '') {
   $name = resp_img_suffix_config_name($resp_img_suffix);
   if ($config && !$config->isNew()) {
@@ -343,8 +343,8 @@ function resp_img_suffix_delete($resp_img_suffix, $theme_key = '') {
 }
 
 /**
-* Toggle status of a single suffix.
-*/
+ * Toggle status of a single suffix.
+ */
 function resp_img_suffix_toggle_status($resp_img_suffix) {
   $name = resp_img_suffix_config_name($resp_img_suffix);
   $config = config($name);
@@ -565,13 +565,15 @@ function theme_picture($variables) {
  */
 function resp_img_field_formatter_info_alter(&$info) {
   foreach ($info as $formatter_key => &$formatter) {
-    if (!isset($formatter['settings']) || !is_array($formatter['settings'])) {
-      $formatter['settings'] = array();
+    if ($formatter_key == 'image') {
+      if (!isset($formatter['settings']) || !is_array($formatter['settings'])) {
+        $formatter['settings'] = array();
+      }
+      $formatter['settings'] += array(
+        'resp_img_responsive' => FALSE,
+        'resp_img' => array(),
+      );
     }
-    $formatter['settings'] += array(
-      'resp_img_responsive' => FALSE,
-      'resp_img' => array(),
-    );
   }
 }
 
@@ -587,8 +589,12 @@ function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $
         '#type' => 'checkbox',
         '#title' => t('Go responsive'),
         '#default_value' => isset($settings['resp_img_responsive']) ? $settings['resp_img_responsive'] : FALSE,
+        // @todo: needs better wording
+        '#description' => t('If you enable this, you can select an image style for each defined suffix/breakpoint.<br />
+          The image style at the top will be used as default/fallback.<br />
+          If you leave all dropdowns empty the logic will try to use the default suffix.'),
       );
-      drupal_add_library('system', 'drupal.states');
+
       $element['resp_img'] = array(
         '#type' => 'container',
         '#states' => array(
@@ -602,7 +608,7 @@ function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $
       foreach ($theme_suffixes as $suffix_name => $suffix) {
         $label = $suffix->name . ' [' . $suffix->breakpoint . ']';
         $element['resp_img'][$suffix_name] = array(
-          '#title' => $label,
+          '#title' => check_plain($label),
           '#type' => 'select',
           '#options' => $image_styles,
           '#default_value' => isset($settings['resp_img'][$suffix_name]) ? $settings['resp_img'][$suffix_name] : '',
@@ -619,7 +625,7 @@ function resp_img_field_formatter_settings_summary_alter(&$summary, $context) {
   if (isset($context['field']['type']) && $context['field']['type'] === 'image') {
     $settings = $context['instance']['display'][$context['view_mode']]['settings'];
     if (isset($settings['resp_img_responsive']) && $settings['resp_img_responsive']) {
-      $summary .= '<br>Responsive mode activated';
+      $summary .= '<br />Responsive mode activated';
     }
   }
 }
