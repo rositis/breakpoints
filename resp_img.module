@@ -34,9 +34,10 @@ function resp_img_themes_enabled($theme_list) {
         $suffix->breakpoint = $breakpoint;
         $suffix->source = $theme_key;
         $suffix->source_type = 'theme';
+        $suffix->theme = '';
         $suffix->status = TRUE;
         $suffix->weight = $weight++;
-        resp_img_suffix_save($suffix, $theme_key);
+        resp_img_suffix_save($suffix);
       }
     }
   }
@@ -221,7 +222,7 @@ function resp_img_suffix_load_by_fullkey($name) {
  * Load all suffixes.
  */
 function resp_img_suffix_load_all($theme_key = '') {
-  $suffixes_user = resp_img_suffix_load_all_custom();
+  $suffixes_user = resp_img_suffix_load_all_custom($theme_key);
   $suffixes_module = resp_img_suffix_load_all_module();
   $suffixes_theme = resp_img_suffix_load_all_theme($theme_key);
   $suffixes = array_merge($suffixes_theme, $suffixes_module, $suffixes_user);
@@ -266,8 +267,18 @@ function _resp_img_suffix_load_all_by_type($source_type, $source = '') {
 /**
  * Load all custom suffixes.
  */
-function resp_img_suffix_load_all_custom() {
-  return _resp_img_suffix_load_all_by_type(RESP_IMG_SOURCE_TYPE_CUSTOM);
+function resp_img_suffix_load_all_custom($theme_key = '') {
+  $suffixes = _resp_img_suffix_load_all_by_type(RESP_IMG_SOURCE_TYPE_CUSTOM);
+  if (!empty($theme_key)) {
+    $theme_suffixes = array();
+    foreach ($suffixes as $suffix_name => $suffix) {
+      if (!isset($suffix->theme) || empty($suffix->theme) || $suffix->theme == $theme_key) {
+        $theme_suffixes[$suffix_name] = $suffix;
+      }
+    }
+    $suffixes = $theme_suffixes;
+  }
+  return $suffixes;
 }
 
 /**
