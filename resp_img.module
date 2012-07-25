@@ -432,12 +432,14 @@ function resp_img_field_attach_view_alter(&$output, $context) {
       $suffix_styles = array();
       if (isset($settings['resp_img_responsive']) && $settings['resp_img_responsive']) {
         foreach ($settings['resp_img'] as $suffix_name => $multipliers) {
-          foreach ($multipliers as $multiplier => $image_style) {
-            if (!empty($settings['resp_img'][$suffix_name][$multiplier])) {
-              if (!isset($suffix_styles[$suffix_name])) {
-                $suffix_styles[$suffix_name] = array();
+          if (is_array($multipliers)) {
+            foreach ($multipliers as $multiplier => $image_style) {
+              if (!empty($settings['resp_img'][$suffix_name][$multiplier])) {
+                if (!isset($suffix_styles[$suffix_name])) {
+                  $suffix_styles[$suffix_name] = array();
+                }
+                $suffix_styles[$suffix_name][$multiplier] = $image_style;
               }
-              $suffix_styles[$suffix_name][$multiplier] = $image_style;
             }
           }
         }
@@ -579,31 +581,33 @@ function theme_picture($variables) {
     }
   }
 
-  $output[] = '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
+  if (!empty($images)) {
+    $output[] = '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
 
-  // add variants to the output
-  foreach ($images as $image) {
-    if (isset($image['media']) && !empty($image['media'])) {
-      if (isset($image['image'])) {
-        $output[] = '<!-- <source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']) . ' -->';
-        $output[] = '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
+    // add variants to the output
+    foreach ($images as $image) {
+      if (isset($image['media']) && !empty($image['media'])) {
+        if (isset($image['image'])) {
+          $output[] = '<!-- <source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']) . ' -->';
+          $output[] = '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
+        }
+        else {
+          $output[] = '<!-- <source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '"> -->';
+          $output[] = '<source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '">';
+        }
       }
       else {
-        $output[] = '<!-- <source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '"> -->';
-        $output[] = '<source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '">';
+        $output[] = '<!-- <source ' . str_replace('<img', '', $image['image']) . ' -->';
+        $output[] = '<source ' . str_replace('<img', '', $image['image']);
       }
     }
-    else {
-      $output[] = '<!-- <source ' . str_replace('<img', '', $image['image']) . ' -->';
-      $output[] = '<source ' . str_replace('<img', '', $image['image']);
-    }
-  }
 
-  // output the default image as fallback
-  // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
-  $output[] = '<noscript>' . $images[0]['image'] . '</noscript>';
-  $output[] = '</picture>';
-  return implode("\n", $output);
+    // output the default image as fallback
+    // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
+    $output[] = '<noscript>' . $images[0]['image'] . '</noscript>';
+    $output[] = '</picture>';
+    return implode("\n", $output);
+  }
 }
 
 /**
