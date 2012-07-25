@@ -428,17 +428,25 @@ function resp_img_field_attach_view_alter(&$output, $context) {
       else {
         $settings = $instance['display']['default']['settings'];
       }
+
+      $suffix_styles = array();
       if (isset($settings['resp_img_responsive']) && $settings['resp_img_responsive']) {
-        $suffix_styles = array();
-        foreach ($settings['resp_img'] as $suffix_name => $image_style) {
-          if (!empty($settings['resp_img'][$suffix_name])) {
-            $suffix_styles[$suffix_name] = $image_style;
+        foreach ($settings['resp_img'] as $suffix_name => $multipliers) {
+          foreach ($multipliers as $multiplier => $image_style) {
+            if (!empty($settings['resp_img'][$suffix_name][$multiplier])) {
+              if (!isset($suffix_styles[$suffix_name])) {
+                $suffix_styles[$suffix_name] = array();
+              }
+              $suffix_styles[$suffix_name][$multiplier] = $image_style;
+            }
           }
         }
       }
 
+      // Change the formatter so it uses ours.
       $element['#formatter'] = 'picture';
 
+      // Change the formatter on all items as well.
       $num_fields = count($element['#items']);
       if (!empty($suffix_styles)) {
         for ($delta = 0; $delta < $num_fields; $delta++) {
@@ -541,15 +549,32 @@ function theme_picture($variables) {
     $images[] = array(
       'image' => theme_image_style($variables),
     );
-    foreach ($variables['breakpoints'] as $suffix_name => $image_style) {
+    foreach ($variables['breakpoints'] as $suffix_name => $multipliers) {
       $suffix = resp_img_suffix_load_by_fullkey($suffix_name);
       if ($suffix) {
-        $new_image = $variables;
-        $new_image['style_name'] = $image_style;
-        $images[] = array(
-          'image' => theme_image_style($new_image),
-          'media' => $suffix->breakpoint,
-        );
+        $new_images = array();
+        foreach ($multipliers as $multiplier => $image_style) {
+          $new_image = $variables;
+          $new_image['style_name'] = $image_style;
+          $new_image['#multiplier'] = $multiplier;
+          $new_images[] = $new_image;
+        }
+        if (count($new_images) == 1) {
+          $images[] = array(
+            'image' => theme('image_style', $new_images[0]),
+            'media' => $suffix->breakpoint,
+          );
+        }
+        else {
+          $srcset = array();
+          foreach ($new_images as $new_image) {
+            $srcset[] = image_style_url($new_image['style_name'], $new_image['uri']) . ' ' . $new_image['#multiplier'];
+          }
+          $images[] = array(
+            'srcset' => implode(', ', $srcset),
+            'media' => $suffix->breakpoint,
+          );
+        }
       }
     }
   }
@@ -559,8 +584,14 @@ function theme_picture($variables) {
   // add variants to the output
   foreach ($images as $image) {
     if (isset($image['media']) && !empty($image['media'])) {
-      $output[] = '<!-- <source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']) . ' -->';
-      $output[] = '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
+      if (isset($image['image'])) {
+        $output[] = '<!-- <source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']) . ' -->';
+        $output[] = '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
+      }
+      else {
+        $output[] = '<!-- <source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '"> -->';
+        $output[] = '<source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '">';
+      }
     }
     else {
       $output[] = '<!-- <source ' . str_replace('<img', '', $image['image']) . ' -->';
@@ -622,12 +653,24 @@ function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $
       $image_styles = image_style_options(TRUE);
       foreach ($theme_suffixes as $suffix_name => $suffix) {
         $label = $suffix->name . ' [' . $suffix->breakpoint . ']';
-        $element['resp_img'][$suffix_name] = array(
+        $element['resp_img'][$suffix_name]['1x'] = array(
           '#title' => check_plain($label),
           '#type' => 'select',
           '#options' => $image_styles,
-          '#default_value' => isset($settings['resp_img'][$suffix_name]) ? $settings['resp_img'][$suffix_name] : '',
+          '#default_value' => isset($settings['resp_img'][$suffix_name]['1x']) ? $settings['resp_img'][$suffix_name]['1x'] : '',
         );
+        if (isset($suffix->multipliers) && !empty($suffix->multipliers)) {
+          foreach ($suffix->multipliers as $multiplier => $value) {
+            if ($multiplier != '1x' && $value) {
+              $element['resp_img'][$suffix_name][$multiplier] = array(
+                '#title' => check_plain($multiplier . ' ' . $label),
+                '#type' => 'select',
+                '#options' => $image_styles,
+                '#default_value' => isset($settings['resp_img'][$suffix_name][$multiplier]) ? $settings['resp_img'][$suffix_name][$multiplier] : '',
+              );
+            }
+          }
+        }
       }
     }
   }

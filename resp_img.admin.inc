@@ -18,6 +18,9 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
   $multipliers = array();
   if (isset($settings->multipliers) && !empty($settings->multipliers)) {
     $multipliers = drupal_map_assoc(array_values($settings->multipliers));
+    if (array_key_exists('1x', $multipliers)) {
+      unset($multipliers['1x']);
+    }
   }
 
   $form['suffixes'] = array(
