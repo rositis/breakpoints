@@ -592,8 +592,8 @@ function theme_picture($variables) {
           $output[] = '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
         }
         else {
-          $output[] = '<!-- <source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '"> -->';
-          $output[] = '<source media="' . $image['media'] . '" srcset="' . $image['srcset'] . '">';
+          $output[] = '<!-- <source class="' . RESP_IMG_CLASS .'" media="' . $image['media'] . '" srcset="' . $image['srcset'] . '"> -->';
+          $output[] = '<source class="' . RESP_IMG_CLASS .'" media="' . $image['media'] . '" srcset="' . $image['srcset'] . '">';
         }
       }
       else {
