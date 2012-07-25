@@ -215,7 +215,9 @@ function resp_img_suffix_load_by_fullkey($name) {
   if ($config->isNew()) {
     return FALSE;
   }
-  return (object)$config->get();
+  $data = $config->get();
+  $data += resp_img_suffix_empty_array();
+  return (object)$data;
 }
 
 /**
@@ -319,6 +321,7 @@ function resp_img_suffix_empty_array() {
     'status' => '',
     'weight' => 0,
     'theme' => '',
+    'multipliers' => '',
   );
 }
 
@@ -337,6 +340,7 @@ function resp_img_suffix_save($resp_img_suffix) {
   $config->set('theme', $resp_img_suffix->theme);
   $config->set('status', $resp_img_suffix->status);
   $config->set('weight', $resp_img_suffix->weight);
+  $config->set('multipliers', $resp_img_suffix->multipliers);
   $config->save();
 
   return $resp_img_suffix;

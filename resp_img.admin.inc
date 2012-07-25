@@ -14,11 +14,18 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
   }
   $form = array();
 
+  $settings = resp_img_settings();
+  $multipliers = array();
+  if (isset($settings->multipliers) && !empty($settings->multipliers)) {
+    $multipliers = drupal_map_assoc(array_values($settings->multipliers));
+  }
+
   $form['suffixes'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
     '#theme_key' => $theme_key,
     '#theme' => 'resp_img_admin_suffixes_table',
+    '#multipliers' => $multipliers,
   );
 
   $suffixes = resp_img_suffix_load_all($theme_key);
@@ -35,7 +42,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
         '#type' => 'textfield',
         '#default_value' => $suffix->breakpoint,
         '#disabled' => $suffix->source === 'theme',
-        '#size' => 60,
+        '#size' => empty($multipliers) ? 60 : 30,
       ),
       'weight' => array(
         '#type' => 'textfield',
@@ -44,6 +51,14 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
         '#attributes' => array('class' => array('suffixes-weight')),
       ),
     );
+    // Add multipliers checkboxes if needed.
+    if (!empty($multipliers)) {
+      $form['suffixes'][$key]['multipliers'] = array(
+        '#type' => 'checkboxes',
+        '#default_value' => isset($suffix->multipliers) ? $suffix->multipliers : array(),
+        '#options' => $multipliers,
+      );
+    }
   }
 
   // Add empty row
@@ -56,7 +71,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
     'breakpoint' => array(
       '#type' => 'textfield',
       '#default_value' => '',
-      '#size' => 60,
+      '#size' => empty($multipliers) ? 60 : 30,
     ),
     'weight' => array(
       '#type' => 'textfield',
@@ -65,6 +80,14 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
       '#attributes' => array('class' => array('suffixes-weight')),
     ),
   );
+  // Add multipliers checkboxes if needed.
+  if (!empty($multipliers)) {
+    $form['suffixes']['new']['multipliers'] = array(
+      '#type' => 'checkboxes',
+      '#default_value' => array(),
+      '#options' => $multipliers,
+    );
+  }
 
   // Buttons
   $form['buttons'] = array(
@@ -97,6 +120,7 @@ function theme_resp_img_admin_suffixes_table($variables) {
     $row = array();
     $row[] = drupal_render($form[$key]['name']);
     $row[] = drupal_render($form[$key]['breakpoint']);
+    $row[] = drupal_render($form[$key]['multipliers']);
     if ($key != 'new') {
       $suffix = $form[$key]['#suffix_data'];
       $row[] = $suffix->source . ' (' . $suffix->source_type . ')';
@@ -127,6 +151,7 @@ function theme_resp_img_admin_suffixes_table($variables) {
   $header =  array(
     t('Name'),
     t('Breakpoint, @media ...'),
+    t('Multipliers'),
     t('Source'),
     t('Status'),
     array('data' => t('Operations'), 'colspan' => 2),
@@ -172,6 +197,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
         if ($suffix) {
           $suffix->breakpoint = $suffixdata['breakpoint'];
           $suffix->weight = $suffixdata['weight'];
+          $suffix->multipliers = $suffixdata['multipliers'];
           resp_img_suffix_save($suffix);
         }
         else {
@@ -184,6 +210,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
           $suffix->theme = $form_state['complete_form']['suffixes']['#theme_key'];
           $suffix->weight = $suffixdata['weight'];
           $suffix->status = TRUE;
+          $suffix->multipliers = $suffixdata['multipliers'];
           resp_img_suffix_save($suffix);
         }
       }
