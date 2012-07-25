@@ -84,6 +84,12 @@
 										// Clone the original image into memory so the width is unaffected by page styles:
 										this.width = ( this.cloneNode( true ).width / resMatch );
 									}
+                  if (match.getAttribute( "title" )) {
+                    newImg.title = match.getAttribute( "title" );
+                  }
+                  if (match.getAttribute( "class" )) {
+                    newImg.setAttribute ("class", match.getAttribute( "class" ));
+                  }
 									picImg.parentNode.replaceChild( newImg, picImg );
 								}
 								break; // We’ve matched, so bail out of the loop here.
@@ -92,17 +98,17 @@
 				} else {
 					// No `srcset` in play, so just use the `src` value:
 					picImg.src = match.getAttribute( "src" );
+          if (match.getAttribute( "width" ) && match.getAttribute( "height" )) {
+            picImg.width = match.getAttribute( "width" );
+            picImg.height = match.getAttribute( "height" );
+          }
+          if (match.getAttribute( "title" )) {
+            picImg.title = match.getAttribute( "title" );
+          }
+          if (match.getAttribute( "class" )) {
+            picImg.setAttribute ("class", match.getAttribute( "class" ));
+          }
 				}
-        if (match.getAttribute( "width" ) && match.getAttribute( "height" )) {
-          picImg.width = match.getAttribute( "width" );
-          picImg.height = match.getAttribute( "height" );
-        }
-        if (match.getAttribute( "title" )) {
-          picImg.title = match.getAttribute( "title" );
-        }
-        if (match.getAttribute( "class" )) {
-          picImg.setAttribute ("class", match.getAttribute( "class" ));
-        }
 			}
 		}
 		/*
