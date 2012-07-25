@@ -83,6 +83,9 @@
 									newImg.onload = function() {
 										// Clone the original image into memory so the width is unaffected by page styles:
 										this.width = ( this.cloneNode( true ).width / resMatch );
+                    if (this.width == 0) {
+                      this.width = '';
+                    }
 									}
                   if (match.getAttribute( "title" )) {
                     newImg.title = match.getAttribute( "title" );
