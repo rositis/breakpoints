@@ -1,159 +1,158 @@
 /*! Picturefill - Author: Scott Jehl, 2012 | License: MIT/GPLv2 */
 /*
-	Picturefill: A polyfill for proposed behavior of the picture element, which does not yet exist, but should. :)
-	* Notes:
-		* For active discussion of the picture element, see http://www.w3.org/community/respimg/
-		* While this code does work, it is intended to be used only for example purposes until either:
-			A) A W3C Candidate Recommendation for <picture> is released
-			B) A major browser implements <picture>
+  Picturefill: A polyfill for proposed behavior of the picture element, which does not yet exist, but should. :)
+  * Notes:
+    * For active discussion of the picture element, see http://www.w3.org/community/respimg/
+    * While this code does work, it is intended to be used only for example purposes until either:
+      A) A W3C Candidate Recommendation for <picture> is released
+      B) A major browser implements <picture>
 */
 (function( w ){
 
-	// Enable strict mode
-	"use strict";
+  // Enable strict mode
+  "use strict";
 
-	// User preference for HD content when available
-	var prefHD = false || w.localStorage && w.localStorage[ "picturefill-prefHD" ] === "true",
-		hasHD;
+  // User preference for HD content when available
+  var prefHD = false || w.localStorage && w.localStorage[ "picturefill-prefHD" ] === "true",
+    hasHD;
 
-	// Test if `<picture>` is supported natively, if so, exit - no polyfill needed.
-	if ( !!( w.document.createElement( "picture" ) && w.document.createElement( "source" ) && w.HTMLPictureElement ) ){
-		return;
-	}
+  // Test if `<picture>` is supported natively, if so, exit - no polyfill needed.
+  if ( !!( w.document.createElement( "picture" ) && w.document.createElement( "source" ) && w.HTMLPictureElement ) ){
+    return;
+  }
 
-	w.picturefill = function() {
-		var ps = w.document.getElementsByTagName( "picture" );
+  w.picturefill = function() {
+    function _copyAttributes(src, tar) {
+      if (src.getAttribute( "width" ) && src.getAttribute( "height" )) {
+        tar.width = src.getAttribute( "width" );
+        tar.height = src.getAttribute( "height" );
+      }
+      if (src.getAttribute( "title" )) {
+        tar.title = src.getAttribute( "title" );
+      }
+      if (src.getAttribute( "class" )) {
+        tar.setAttribute ("class", src.getAttribute( "class" ));
+      }
+    }
 
-		// Loop the pictures
-		for( var i = 0, il = ps.length; i < il; i++ ){
-			var sources = ps[ i ].getElementsByTagName( "source" ),
-				picImg = null,
-				matches = [];
+    var ps = w.document.getElementsByTagName( "picture" );
 
-			// If no sources are found, they're likely erased from the DOM. Try finding them inside comments.
-			if( !sources.length ){
-				var picText =  ps[ i ].innerHTML,
-					frag = w.document.createElement( "div" ),
-					// For IE9, convert the source elements to divs
-					srcs = picText.replace( /(<)source([^>]+>)/gmi, "$1div$2" ).match( /<div[^>]+>/gmi );
+    // Loop the pictures
+    for( var i = 0, il = ps.length; i < il; i++ ){
+      var sources = ps[ i ].getElementsByTagName( "source" ),
+        picImg = null,
+        matches = [];
 
-				frag.innerHTML = srcs.join( "" );
-				sources = frag.getElementsByTagName( "div" );
-			}
+      // If no sources are found, they're likely erased from the DOM. Try finding them inside comments.
+      if( !sources.length ){
+        var picText =  ps[ i ].innerHTML,
+          frag = w.document.createElement( "div" ),
+          // For IE9, convert the source elements to divs
+          srcs = picText.replace( /(<)source([^>]+>)/gmi, "$1div$2" ).match( /<div[^>]+>/gmi );
 
-			// See which sources match
-			for( var j = 0, jl = sources.length; j < jl; j++ ){
-				var media = sources[ j ].getAttribute( "media" );
-				// if there's no media specified, OR w.matchMedia is supported
-				if( !media || ( w.matchMedia && w.matchMedia( media ).matches ) ){
-					matches.push( sources[ j ] );
-				}
-			}
+        frag.innerHTML = srcs.join( "" );
+        sources = frag.getElementsByTagName( "div" );
+      }
 
-			// Find any existing img element in the picture element
-			picImg = ps[ i ].getElementsByTagName( "img" )[ 0 ];
+      // See which sources match
+      for( var j = 0, jl = sources.length; j < jl; j++ ){
+        var media = sources[ j ].getAttribute( "media" );
+        // if there's no media specified, OR w.matchMedia is supported
+        if( !media || ( w.matchMedia && w.matchMedia( media ).matches ) ){
+          matches.push( sources[ j ] );
+        }
+      }
 
-			if( matches.length ){
-				// Grab the most appropriate (last) match.
-				var match = matches.pop(),
-					srcset = match.getAttribute( "srcset" );
+      // Find any existing img element in the picture element
+      picImg = ps[ i ].getElementsByTagName( "img" )[ 0 ];
 
-				if( !picImg ){
-					picImg = w.document.createElement( "img" );
-					picImg.alt = ps[ i ].getAttribute( "alt" );
-					ps[ i ].appendChild( picImg );
-				}
+      if( matches.length ){
+        // Grab the most appropriate (last) match.
+        var match = matches.pop(),
+          srcset = match.getAttribute( "srcset" );
 
-				if( srcset ) {
-						var screenRes = ( prefHD && w.devicePixelRatio ) || 1, // Is it worth looping through reasonable matchMedia values here?
-							sources = srcset.split(","); // Split comma-separated `srcset` sources into an array.
+        if( !picImg ){
+          picImg = w.document.createElement( "img" );
+          picImg.alt = ps[ i ].getAttribute( "alt" );
+          ps[ i ].appendChild( picImg );
+        }
 
-						hasHD = w.devicePixelRatio > 1;
+        if( srcset ) {
+            var screenRes = ( prefHD && w.devicePixelRatio ) || 1, // Is it worth looping through reasonable matchMedia values here?
+              sources = srcset.split(","); // Split comma-separated `srcset` sources into an array.
 
-						for( var res = sources.length, r = res - 1; r >= 0; r-- ) { // Loop through each source/resolution in `srcset`.
-							var source = sources[ r ].replace(/^\s*/, '').replace(/\s*$/, '').split(" "), // Remove any leading whitespace, then split on spaces.
-								resMatch = parseFloat( source[1], 10 ); // Parse out the resolution for each source in `srcset`.
+            hasHD = w.devicePixelRatio > 1;
 
-							if( screenRes >= resMatch ) {
-								if( picImg.getAttribute( "src" ) !== source[0] ) {
-									var newImg = document.createElement("img");
+            for( var res = sources.length, r = res - 1; r >= 0; r-- ) { // Loop through each source/resolution in `srcset`.
+              var source = sources[ r ].replace(/^\s*/, '').replace(/\s*$/, '').split(" "), // Remove any leading whitespace, then split on spaces.
+                resMatch = parseFloat( source[1], 10 ); // Parse out the resolution for each source in `srcset`.
 
-									newImg.src = source[0];
-									// When the image is loaded, set a width equal to that of the original’s intrinsic width divided by the screen resolution:
-									newImg.onload = function() {
-										// Clone the original image into memory so the width is unaffected by page styles:
+              if( screenRes >= resMatch ) {
+                if( picImg.getAttribute( "src" ) !== source[0] ) {
+                  var newImg = document.createElement("img");
+
+                  newImg.src = source[0];
+                  // When the image is loaded, set a width equal to that of the original’s intrinsic width divided by the screen resolution:
+                  newImg.onload = function() {
+                    // Clone the original image into memory so the width is unaffected by page styles:
                     var w = this.cloneNode( true ).width;
                     if (w > 0) {
                       this.width = ( w / resMatch );
                     }
-									}
-                  if (match.getAttribute( "title" )) {
-                    newImg.title = match.getAttribute( "title" );
                   }
-                  if (match.getAttribute( "class" )) {
-                    newImg.setAttribute ("class", match.getAttribute( "class" ));
-                  }
-									picImg.parentNode.replaceChild( newImg, picImg );
-								}
-								break; // We’ve matched, so bail out of the loop here.
-							}
-						}
-				} else {
-					// No `srcset` in play, so just use the `src` value:
-					picImg.src = match.getAttribute( "src" );
-          if (match.getAttribute( "width" ) && match.getAttribute( "height" )) {
-            picImg.width = match.getAttribute( "width" );
-            picImg.height = match.getAttribute( "height" );
-          }
-          if (match.getAttribute( "title" )) {
-            picImg.title = match.getAttribute( "title" );
-          }
-          if (match.getAttribute( "class" )) {
-            picImg.setAttribute ("class", match.getAttribute( "class" ));
-          }
-				}
-			}
-		}
-		/*
+                  _copyAttributes(match, newImg);
+                  picImg.parentNode.replaceChild( newImg, picImg );
+                }
+                break; // We’ve matched, so bail out of the loop here.
+              }
+            }
+        } else {
+          // No `srcset` in play, so just use the `src` value:
+          picImg.src = match.getAttribute( "src" );
+          _copyAttributes(match, picImg);
+        }
+      }
+    }
+    /*
 // Manual resolution switching, to simulate UA interference.
-		if( hasHD ){
-			var body = w.document.getElementsByTagName("body")[0],
-				prevSwitch = w.document.getElementById( "#toggle-res" ),
-				picSwitch = w.document.createElement( "a" );
+    if( hasHD ){
+      var body = w.document.getElementsByTagName("body")[0],
+        prevSwitch = w.document.getElementById( "#toggle-res" ),
+        picSwitch = w.document.createElement( "a" );
 
-			if( prevSwitch ){
-				body.removeChild( prevSwitch );
-			}
+      if( prevSwitch ){
+        body.removeChild( prevSwitch );
+      }
 
-			picSwitch.id = "toggle-res";
-			picSwitch.href = "#";
-			picSwitch.innerHTML = ( prefHD ? "S" : "H" ) + "D only";
-			picSwitch.title = "Switch images to " + ( prefHD ? "Standard" : "High" ) + "Definition";
-			picSwitch.className = "pf-pref pf-pref-" + ( prefHD ? "standard" : "high" );
+      picSwitch.id = "toggle-res";
+      picSwitch.href = "#";
+      picSwitch.innerHTML = ( prefHD ? "S" : "H" ) + "D only";
+      picSwitch.title = "Switch images to " + ( prefHD ? "Standard" : "High" ) + "Definition";
+      picSwitch.className = "pf-pref pf-pref-" + ( prefHD ? "standard" : "high" );
 
-			body.insertBefore( picSwitch, body.children[0] );
+      body.insertBefore( picSwitch, body.children[0] );
 
-			picSwitch.onclick = function(){
-				prefHD = !prefHD;
-				if( w.localStorage ){
-					w.localStorage[ "picturefill-prefHD" ] = prefHD;
-				}
-				return false;
-			};
-		}*/
-	};
+      picSwitch.onclick = function(){
+        prefHD = !prefHD;
+        if( w.localStorage ){
+          w.localStorage[ "picturefill-prefHD" ] = prefHD;
+        }
+        return false;
+      };
+    }*/
+  };
 
-	// Run on resize and domready (w.load as a fallback)
-	if( w.addEventListener ){
-		w.addEventListener( "resize", w.picturefill, false );
-		w.addEventListener( "DOMContentLoaded", function(){
-			w.picturefill();
-			// Run once only
-			w.removeEventListener( "load", w.picturefill, false );
-		}, false );
-		w.addEventListener( "load", w.picturefill, false );
-	}
-	else if( w.attachEvent ){
-		w.attachEvent( "onload", w.picturefill );
-	}
+  // Run on resize and domready (w.load as a fallback)
+  if( w.addEventListener ){
+    w.addEventListener( "resize", w.picturefill, false );
+    w.addEventListener( "DOMContentLoaded", function(){
+      w.picturefill();
+      // Run once only
+      w.removeEventListener( "load", w.picturefill, false );
+    }, false );
+    w.addEventListener( "load", w.picturefill, false );
+  }
+  else if( w.attachEvent ){
+    w.attachEvent( "onload", w.picturefill );
+  }
 })( this );

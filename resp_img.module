@@ -548,9 +548,14 @@ function theme_picture($variables) {
   }
   // Use mapped styles by hand.
   else {
+    // default image.
+    $img = theme('image_style', $variables);
+    $img = str_replace('<img', '', $img);
+    $img = str_replace('/>', '', $img);
     $images[] = array(
-      'image' => theme_image_style($variables),
+      'image' => $img,
     );
+    // all breakpoints and multipliers.
     foreach ($variables['breakpoints'] as $suffix_name => $multipliers) {
       $suffix = resp_img_suffix_load_by_fullkey($suffix_name);
       if ($suffix) {
@@ -561,9 +566,13 @@ function theme_picture($variables) {
           $new_image['#multiplier'] = $multiplier;
           $new_images[] = $new_image;
         }
+        $img = theme('image_style', $new_images[0]);
+        $img = str_replace('<img', '', $img);
+        $img = str_replace('/>', '', $img);
+
         if (count($new_images) == 1) {
           $images[] = array(
-            'image' => theme('image_style', $new_images[0]),
+            'image' => $img,
             'media' => $suffix->breakpoint,
           );
         }
@@ -572,39 +581,41 @@ function theme_picture($variables) {
           foreach ($new_images as $new_image) {
             $srcset[] = image_style_url($new_image['style_name'], $new_image['uri']) . ' ' . $new_image['#multiplier'];
           }
+          $img = preg_replace('/src="[^"]*"/', '', $img);
           $images[] = array(
             'srcset' => implode(', ', $srcset),
             'media' => $suffix->breakpoint,
+            'image' => $img,
           );
         }
       }
     }
   }
-
+dpm($images);
   if (!empty($images)) {
     $output[] = '<picture alt="' . check_plain($variables['alt']) . '" title="' . check_plain($variables['title']) . '">';
 
     // add variants to the output
     foreach ($images as $image) {
       if (isset($image['media']) && !empty($image['media'])) {
-        if (isset($image['image'])) {
-          $output[] = '<!-- <source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']) . ' -->';
-          $output[] = '<source media="' . $image['media'] . '" ' . str_replace('<img', '', $image['image']);
+        if (!isset($image['srcset'])) {
+          $output[] = '<!-- <source media="' . $image['media'] . '" ' . $image['image'] . '> -->';
+          $output[] = '<source media="' . $image['media'] . '" ' . $image['image'] . '>';
         }
         else {
-          $output[] = '<!-- <source class="' . RESP_IMG_CLASS .'" media="' . $image['media'] . '" srcset="' . $image['srcset'] . '"> -->';
-          $output[] = '<source class="' . RESP_IMG_CLASS .'" media="' . $image['media'] . '" srcset="' . $image['srcset'] . '">';
+          $output[] = '<!-- <source class="' . RESP_IMG_CLASS .'" media="' . $image['media'] . '" srcset="' . $image['srcset'] . '" ' . $image['image'] . '> -->';
+          $output[] = '<source class="' . RESP_IMG_CLASS .'" media="' . $image['media'] . '" srcset="' . $image['srcset'] . '" ' . $image['image'] . '>';
         }
       }
       else {
-        $output[] = '<!-- <source ' . str_replace('<img', '', $image['image']) . ' -->';
-        $output[] = '<source ' . str_replace('<img', '', $image['image']);
+        $output[] = '<!-- <source ' . $image['image'] . '> -->';
+        $output[] = '<source ' . $image['image'] . '>';
       }
     }
 
     // output the default image as fallback
     // $output .= '<img src="' . image_style_url($variables['style_name'], $variables['uri']) . '" alt="' . check_plain($variables['alt']) . '" />';
-    $output[] = '<noscript>' . $images[0]['image'] . '</noscript>';
+    $output[] = '<noscript><img ' . $images[0]['image'] . '/></noscript>';
     $output[] = '</picture>';
     return implode("\n", $output);
   }
