@@ -8,7 +8,7 @@
 /**
  * Admin form
  */
-function resp_img_admin_breakpoints($form, &$form_state, $breakpoint_group_name = '') {
+function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_name = '') {
 
   // Global is the same as no group name
   if ($breakpoint_group_name == 'global') {
@@ -18,7 +18,7 @@ function resp_img_admin_breakpoints($form, &$form_state, $breakpoint_group_name 
 
   $form = array();
 
-  $settings = resp_img_settings();
+  $settings = breakpoints_settings();
   $multipliers = array();
   if (isset($settings->multipliers) && !empty($settings->multipliers)) {
     $multipliers = drupal_map_assoc(array_values($settings->multipliers));
@@ -30,19 +30,19 @@ function resp_img_admin_breakpoints($form, &$form_state, $breakpoint_group_name 
   $form['breakpoints'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
-    '#theme' => 'resp_img_admin_breakpoints_table',
+    '#theme' => 'breakpoints_admin_breakpoints_table',
     '#multipliers' => $multipliers,
     '#group_name' => $breakpoint_group_name,
   );
 
   $breakpoints = array();
-  $breakpoint_group = resp_img_breakpoint_group_load($breakpoint_group_name);
+  $breakpoint_group = breakpoints_breakpoint_group_load($breakpoint_group_name);
   if ($breakpoint_group_name == '') {
-    $breakpoints = resp_img_breakpoint_load_all();
+    $breakpoints = breakpoints_breakpoint_load_all();
   }
   else {
     foreach ($breakpoint_group->breakpoints as $breakpoint_name) {
-      $breakpoints[$breakpoint_name] = resp_img_breakpoint_load_by_fullkey($breakpoint_name);
+      $breakpoints[$breakpoint_name] = breakpoints_breakpoint_load_by_fullkey($breakpoint_name);
     }
   }
 
@@ -121,14 +121,14 @@ function resp_img_admin_breakpoints($form, &$form_state, $breakpoint_group_name 
   if ($breakpoint_group_name != '') {
     $form['buttons']['editlink'] = array(
       '#type' => 'markup',
-      '#markup' => l('Edit group breakpoints', 'admin/config/media/resp_img/groups/' . $breakpoint_group_name . '/edit', array(
+      '#markup' => l('Edit group breakpoints', 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit', array(
         'query' => drupal_get_destination(),
       )),
     );
-    if ($breakpoint_group->type == RESP_IMG_SOURCE_TYPE_CUSTOM) {
+    if ($breakpoint_group->type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
       $form['buttons']['deletelink'] = array(
         '#type' => 'markup',
-        '#markup' => l('Delete this group', 'admin/config/media/resp_img/groups/' . $breakpoint_group_name . '/delete', array(
+        '#markup' => l('Delete this group', 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/delete', array(
           'query' => drupal_get_destination(),
         )),
       );
@@ -141,8 +141,8 @@ function resp_img_admin_breakpoints($form, &$form_state, $breakpoint_group_name 
 /**
  * Theme form as table.
  */
-function theme_resp_img_admin_breakpoints_table($variables) {
-  drupal_add_css(drupal_get_path('module', 'resp_img') . '/css/resp_img.admin.css');
+function theme_breakpoints_admin_breakpoints_table($variables) {
+  drupal_add_css(drupal_get_path('module', 'breakpoints') . '/css/breakpoints.admin.css');
   $form = $variables['form'];
   $rows = array();
   $link_attributes = array(
@@ -160,9 +160,9 @@ function theme_resp_img_admin_breakpoints_table($variables) {
       $breakpoint = $form[$key]['#breakpoint_data'];
       $row[] = $breakpoint->source . ' (' . $breakpoint->source_type . ')';
       $row[] = $breakpoint->status ? t('Enabled') : t('Disabled');
-      $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/resp_img/' . $form['#group_name'] . '/' . ($breakpoint->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
+      $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/breakpoints/' . $form['#group_name'] . '/' . ($breakpoint->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
       if ($breakpoint->source == 'user') {
-        $row[] = l(t('Delete'), 'admin/config/media/resp_img/' . $form['#group_name'] . '/delete/' . $key, $link_attributes);
+        $row[] = l(t('Delete'), 'admin/config/media/breakpoints/' . $form['#group_name'] . '/delete/' . $key, $link_attributes);
       }
       else {
         $row[] = '';
@@ -202,7 +202,7 @@ function theme_resp_img_admin_breakpoints_table($variables) {
 /**
  * Admin form validation.
  */
-function resp_img_admin_breakpoints_validate($form, &$form_state) {
+function breakpoints_admin_breakpoints_validate($form, &$form_state) {
   if (strpos($form_state['triggering_element']['#id'], 'remove') === FALSE) {
     $breakpoints = $form_state['values']['breakpoints'];
     if (!empty($breakpoints)) {
@@ -223,41 +223,41 @@ function resp_img_admin_breakpoints_validate($form, &$form_state) {
 /**
  * Admin form submit.
  */
-function resp_img_admin_breakpoints_submit($form, &$form_state) {
+function breakpoints_admin_breakpoints_submit($form, &$form_state) {
   $breakpoints = $form_state['values']['breakpoints'];
   $saved_breakpoints = array();
   if (!empty($breakpoints)) {
     foreach ($breakpoints as $breakpointname => $breakpointdata) {
       if (!empty($breakpointdata['name'])) {
-        $breakpoint = resp_img_breakpoint_load_by_fullkey($breakpointname);
+        $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpointname);
         if ($breakpoint) {
           $breakpoint->breakpoint = $breakpointdata['breakpoint'];
           $breakpoint->weight = $breakpointdata['weight'];
           $breakpoint->multipliers = $breakpointdata['multipliers'];
-          resp_img_breakpoint_save($breakpoint);
+          breakpoints_breakpoint_save($breakpoint);
           $saved_breakpoints[] = $breakpointname;
         }
         else {
           $breakpoint = new StdClass();
           $breakpoint->name = $breakpointdata['name'];
-          $breakpoint->breakpoint = RESP_IMG_SEPARATOR . $breakpoint->name;
+          $breakpoint->breakpoint = BREAKPOINTS_SEPARATOR . $breakpoint->name;
           $breakpoint->breakpoint = $breakpointdata['breakpoint'];
           $breakpoint->source = 'user';
           $breakpoint->source_type = 'custom';
           $breakpoint->weight = $breakpointdata['weight'];
           $breakpoint->status = TRUE;
           $breakpoint->multipliers = $breakpointdata['multipliers'];
-          $breakpoint = resp_img_breakpoint_save($breakpoint);
-          $saved_breakpoints[] = resp_img_breakpoint_config_name($breakpoint);
+          $breakpoint = breakpoints_breakpoint_save($breakpoint);
+          $saved_breakpoints[] = breakpoints_breakpoint_config_name($breakpoint);
         }
       }
     }
     $group_name = $form_state['group_name'];
     if ($group_name != '') {
-      $group = resp_img_breakpoint_group_load($group_name);
+      $group = breakpoints_breakpoint_group_load($group_name);
       if ($group) {
         $group->breakpoints = $saved_breakpoints;
-        resp_img_breakpoint_group_save($group);
+        breakpoints_breakpoint_group_save($group);
         dpm($group);
       }
     }
@@ -267,7 +267,7 @@ function resp_img_admin_breakpoints_submit($form, &$form_state) {
 /**
  * Admin action form: enable, disable, delete
  */
-function resp_img_admin_breakpoint_actions_form($form, &$form_state, $theme_key, $action, $breakpoint) {
+function breakpoints_admin_breakpoint_actions_form($form, &$form_state, $theme_key, $action, $breakpoint) {
   $form_state['theme_key'] = $theme_key;
   $form_state['action'] = $action;
   $form_state['breakpoint'] = $breakpoint;
@@ -275,30 +275,30 @@ function resp_img_admin_breakpoint_actions_form($form, &$form_state, $theme_key,
     '%action' => $action,
     '%breakpoint' => $breakpoint,
   ));
-  $path = 'admin/config/media/resp_img/' . $theme_key;
+  $path = 'admin/config/media/breakpoints/' . $theme_key;
   return confirm_form($form, $question, $path, '');
 }
 
 /**
  * Admin action form submit
  */
-function resp_img_admin_breakpoint_actions_form_submit($form, &$form_state) {
+function breakpoints_admin_breakpoint_actions_form_submit($form, &$form_state) {
   $theme_key = $form_state['theme_key'];
   $action = $form_state['action'];
   $breakpoint = $form_state['breakpoint'];
   switch ($action) {
     case 'delete':
-      resp_img_breakpoint_delete($breakpoint);
+      breakpoints_breakpoint_delete($breakpoint);
       break;
     case 'enable':
     case 'disable':
-      resp_img_breakpoint_toggle_status($breakpoint);
+      breakpoints_breakpoint_toggle_status($breakpoint);
       break;
   }
-  $form_state['redirect'] = 'admin/config/media/resp_img/' . $theme_key;
+  $form_state['redirect'] = 'admin/config/media/breakpoints/' . $theme_key;
 }
 
-function resp_img_add_style_form($form, &$form_state) {
+function breakpoints_add_style_form($form, &$form_state) {
   module_load_include('inc', 'image', 'image.admin');
   $form['style'] = array(
     '#title' => t('Image style'),
@@ -316,7 +316,7 @@ function resp_img_add_style_form($form, &$form_state) {
     '#element_validate' => array('image_style_name_validate'),
     '#required' => TRUE,
   );
-  $breakpoints = resp_img_breakpoint_load_all_active();
+  $breakpoints = breakpoints_breakpoint_load_all_active();
   $options = array();
   foreach ($breakpoints as $breakpoint) {
     $options[$breakpoint->breakpoint] = $breakpoint->name . ' (' . $breakpoint->breakpoint . ')';
@@ -337,7 +337,7 @@ function resp_img_add_style_form($form, &$form_state) {
   return $form;
 }
 
-function resp_img_add_style_form_validate($form, &$form_state) {
+function breakpoints_add_style_form_validate($form, &$form_state) {
   foreach (array_filter($form_state['values']['breakpoints']) as $breakpoint) {
     if (image_style_load($form_state['values']['base_name'] . $breakpoint)) {
       form_set_error('breakpoints', t('An image style with the name !name already exists', array('!name' => $form_state['values']['base_name'] . $breakpoint)));
@@ -345,7 +345,7 @@ function resp_img_add_style_form_validate($form, &$form_state) {
   }
 }
 
-function resp_img_add_style_form_submit($form, &$form_state) {
+function breakpoints_add_style_form_submit($form, &$form_state) {
   $base = image_style_load($form_state['values']['style']);
   if (!isset($base['effects'])) {
     $base['effects'] = array();
@@ -361,9 +361,9 @@ function resp_img_add_style_form_submit($form, &$form_state) {
   drupal_set_message(t('The new styles have been created'));
 }
 
-function resp_img_admin_breakpoint_group_edit_form($form, &$form_state, $machine_name = '') {
+function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $machine_name = '') {
   $form = array();
-  $group = resp_img_breakpoint_group_load($machine_name);
+  $group = breakpoints_breakpoint_group_load($machine_name);
 
   $form_state['#breakpoint_group'] = $group;
   $is_new = $machine_name == '';
@@ -386,11 +386,11 @@ function resp_img_admin_breakpoint_group_edit_form($form, &$form_state, $machine
     '#default_value' => isset($group->machine_name) ? $group->machine_name : '',
     '#disabled' => !$is_new,
     '#machine_name' => array(
-      'exists' => 'resp_img_breakpoint_group_name_exists',
+      'exists' => 'breakpoints_breakpoint_group_name_exists',
     ),
   );
 
-  $breakpoints = resp_img_breakpoint_load_all();
+  $breakpoints = breakpoints_breakpoint_load_all();
   foreach ($breakpoints as $breakpoint_name => $breakpoint) {
     $options[$breakpoint_name] = $breakpoint->name . ' [' . $breakpoint->breakpoint . ']';
   }
@@ -414,10 +414,10 @@ function resp_img_admin_breakpoint_group_edit_form($form, &$form_state, $machine
     '#value' => t('Save'),
   );
 
-  if (!$is_new && $group->type == RESP_IMG_SOURCE_TYPE_CUSTOM) {
+  if (!$is_new && $group->type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
     $form['buttons']['deletelink'] = array(
       '#type' => 'markup',
-      '#markup' => l('Delete this group', 'admin/config/media/resp_img/groups/' . $group->machine_name . '/delete', array(
+      '#markup' => l('Delete this group', 'admin/config/media/breakpoints/groups/' . $group->machine_name . '/delete', array(
         'query' => drupal_get_destination(),
       )),
     );
@@ -426,12 +426,12 @@ function resp_img_admin_breakpoint_group_edit_form($form, &$form_state, $machine
   return $form;
 }
 
-function resp_img_admin_breakpoint_group_edit_form_validate($form, &$form_state) {
+function breakpoints_admin_breakpoint_group_edit_form_validate($form, &$form_state) {
   $name = $form_state['values']['machine_name'];
   $label = $form_state['values']['name'];
 }
 
-function resp_img_admin_breakpoint_group_edit_form_submit($form, &$form_state) {
+function breakpoints_admin_breakpoint_group_edit_form_submit($form, &$form_state) {
   $machine_name = $form_state['values']['machine_name'];
   $name = $form_state['values']['name'];
   $breakpoints = array();
@@ -443,42 +443,42 @@ function resp_img_admin_breakpoint_group_edit_form_submit($form, &$form_state) {
   $is_new = $form_state['#is_new'];
 
   if ($is_new) {
-    $new_group = resp_img_breakpoint_group_empty_object();
+    $new_group = breakpoints_breakpoint_group_empty_object();
     $new_group->machine_name = $machine_name;
     $new_group->name = $name;
-    $new_group->type = RESP_IMG_SOURCE_TYPE_CUSTOM;
+    $new_group->type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
     $new_group->breakpoints = $breakpoints;
-    resp_img_breakpoint_group_save($new_group);
+    breakpoints_breakpoint_group_save($new_group);
     menu_cache_clear_all();
-    $form_state['redirect'] = 'admin/config/media/resp_img/groups/' . $machine_name;
+    $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $machine_name;
     drupal_set_message(t('The new group have been created'));
   }
   else {
-    $existing_group = resp_img_breakpoint_group_load($name);
+    $existing_group = breakpoints_breakpoint_group_load($name);
     $existing_group->breakpoints = $breakpoints;
-    resp_img_breakpoint_group_save($existing_group);
+    breakpoints_breakpoint_group_save($existing_group);
   }
 }
 
 /**
  * Delete a group.
  */
-function resp_img_admin_breakpoint_group_delete_form($form, &$form_state, $machine_name) {
-  $group = resp_img_breakpoint_group_load($machine_name);
+function breakpoints_admin_breakpoint_group_delete_form($form, &$form_state, $machine_name) {
+  $group = breakpoints_breakpoint_group_load($machine_name);
   $form_state['machine_name'] = $machine_name;
   $question = t('Are you sure you want to delete %group', array(
     '%group' => $group->name,
   ));
-  $path = 'admin/config/media/resp_img/groups/' . $machine_name;
+  $path = 'admin/config/media/breakpoints/groups/' . $machine_name;
   return confirm_form($form, $question, $path, '');
 }
 
 /**
  * Delete a group.
  */
-function resp_img_admin_breakpoint_group_delete_form_submit($form, &$form_state) {
+function breakpoints_admin_breakpoint_group_delete_form_submit($form, &$form_state) {
   $machine_name = $form_state['machine_name'];
-  resp_img_breakpoint_group_delete_by_name($machine_name);
+  breakpoints_breakpoint_group_delete_by_name($machine_name);
   menu_cache_clear_all();
-  $form_state['redirect'] = 'admin/config/media/resp_img/groups';
+  $form_state['redirect'] = 'admin/config/media/breakpoints/groups';
 }

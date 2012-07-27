@@ -1,4 +1,4 @@
-name = Responsive images and styles
-description = Responsive images and styles
+name = Breakpoints
+description = Manage breakpoints
 core = 8.x
-files[] = resp_img.module
+files[] = breakpoints.module
