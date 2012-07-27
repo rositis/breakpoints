@@ -29,24 +29,24 @@ function resp_img_themes_enabled($theme_list) {
       $weight = 0;
       $theme_settings = $themes[$theme_key]->info['resp_img'];
       // Build a group for each theme
-      $breakpoint_group_theme = resp_img_breakpoint_group_empty_object();
-      $breakpoint_group_theme->machine_name = $theme_key;
-      $breakpoint_group_theme->name = $themes[$theme_key]->info['name'];
-      $breakpoint_group_theme->type = RESP_IMG_SOURCE_TYPE_THEME;
+      $breakpoint_group = resp_img_breakpoint_group_empty_object();
+      $breakpoint_group->machine_name = $theme_key;
+      $breakpoint_group->name = $themes[$theme_key]->info['name'];
+      $breakpoint_group->type = RESP_IMG_SOURCE_TYPE_THEME;
       foreach ($theme_settings as $name => $breakpoint) {
-        $suffix = resp_img_suffix_empty_object();
-        $suffix->name = $name;
-        $suffix->suffix = RESP_IMG_SEPARATOR . $name;
-        $suffix->breakpoint = $breakpoint;
-        $suffix->source = $theme_key;
-        $suffix->source_type = 'theme';
-        $suffix->theme = '';
-        $suffix->status = TRUE;
-        $suffix->weight = $weight++;
-        resp_img_suffix_save($suffix);
-        $breakpoint_group_theme->breakpoints[] = resp_img_suffix_config_name($suffix);
+        $breakpoint = resp_img_breakpoint_empty_object();
+        $breakpoint->name = $name;
+        $breakpoint->breakpoint = RESP_IMG_SEPARATOR . $name;
+        $breakpoint->breakpoint = $breakpoint;
+        $breakpoint->source = $theme_key;
+        $breakpoint->source_type = 'theme';
+        $breakpoint->theme = '';
+        $breakpoint->status = TRUE;
+        $breakpoint->weight = $weight++;
+        resp_img_breakpoint_save($breakpoint);
+        $breakpoint_group->breakpoints[] = resp_img_breakpoint_config_name($breakpoint);
       }
-      resp_img_breakpoint_group_save($breakpoint_group_theme);
+      resp_img_breakpoint_group_save($breakpoint_group);
     }
   }
 }
@@ -58,9 +58,9 @@ function resp_img_themes_enabled($theme_list) {
 function resp_img_themes_disabled($theme_list) {
   $themes = list_themes();
   foreach ($theme_list as $theme_key) {
-    $suffixes = resp_img_suffix_load_all_theme($theme_key);
-    foreach ($suffixes as $suffix) {
-      resp_img_suffix_delete($suffix, $theme_key);
+    $breakpoints = resp_img_breakpoint_load_all_theme($theme_key);
+    foreach ($breakpoints as $breakpoint) {
+      resp_img_breakpoint_delete($breakpoint, $theme_key);
     }
     resp_img_breakpoint_group_delete_by_name($theme_key);
   }
@@ -77,9 +77,9 @@ function resp_img_menu() {
   // cf theme settings page
   $items['admin/config/media/resp_img'] = array(
     'title' => 'Responsive images and styles',
-    'description' => 'Define suffixes and breakpoints',
+    'description' => 'Define breakpoints and breakpoints',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('resp_img_admin_suffixes'),
+    'page arguments' => array('resp_img_admin_breakpoints'),
     'access arguments' => array('administer image styles'),
     'file' => 'resp_img.admin.inc',
     'weight' => 10,
@@ -118,38 +118,41 @@ function resp_img_menu() {
   );
 
   $breakpoint_groups = resp_img_breakpoint_group_load_all();
+  dpm($breakpoint_groups);
   foreach ($breakpoint_groups as $breakpoint_group_name => $breakpoint_group) {
-    $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name] = array(
-      'title' => $breakpoint_group->name,
-      'page arguments' => array('resp_img_admin_suffixes', $breakpoint_group->machine_name),
-      'type' => MENU_LOCAL_TASK,
-      'access arguments' => array('administer image styles'),
-      'file' => 'resp_img.admin.inc',
-      'weight' => 15,
-    );
-    $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name . '/edit'] = array(
-      'title' => 'Edit ' . $breakpoint_group->name,
-      'page arguments' => array('resp_img_admin_breakpoint_group_edit_form', $breakpoint_group->machine_name),
-      'type' => MENU_CALLBACK,
-      'access arguments' => array('administer image styles'),
-      'file' => 'resp_img.admin.inc',
-      'weight' => 15,
-    );
-    $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name . '/delete'] = array(
-      'title' => 'Delete ' . $breakpoint_group->name,
-      'page arguments' => array('resp_img_admin_breakpoint_group_delete_form', $breakpoint_group->machine_name),
-      'type' => MENU_CALLBACK,
-      'access arguments' => array('administer image styles'),
-      'file' => 'resp_img.admin.inc',
-      'weight' => 15,
-    );
-    $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name . '/%/%'] = array(
-      'page arguments' => array('resp_img_admin_suffix_actions_form', $breakpoint_group->machine_name, 6, 7),
-      'type' => MENU_CALLBACK,
-      'access arguments' => array('administer image styles'),
-      'file' => 'resp_img.admin.inc',
-      'weight' => 15,
-    );
+    if (!empty($breakpoint_group->machine_name)) {
+      $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name] = array(
+        'title' => $breakpoint_group->name,
+        'page arguments' => array('resp_img_admin_breakpoints', $breakpoint_group->machine_name),
+        'type' => MENU_LOCAL_TASK,
+        'access arguments' => array('administer image styles'),
+        'file' => 'resp_img.admin.inc',
+        'weight' => 15,
+      );
+      $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name . '/edit'] = array(
+        'title' => 'Edit ' . $breakpoint_group->name,
+        'page arguments' => array('resp_img_admin_breakpoint_group_edit_form', $breakpoint_group->machine_name),
+        'type' => MENU_CALLBACK,
+        'access arguments' => array('administer image styles'),
+        'file' => 'resp_img.admin.inc',
+        'weight' => 15,
+      );
+      $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name . '/delete'] = array(
+        'title' => 'Delete ' . $breakpoint_group->name,
+        'page arguments' => array('resp_img_admin_breakpoint_group_delete_form', $breakpoint_group->machine_name),
+        'type' => MENU_CALLBACK,
+        'access arguments' => array('administer image styles'),
+        'file' => 'resp_img.admin.inc',
+        'weight' => 15,
+      );
+      $items['admin/config/media/resp_img/groups/' . $breakpoint_group->machine_name . '/%/%'] = array(
+        'page arguments' => array('resp_img_admin_breakpoint_actions_form', $breakpoint_group->machine_name, 6, 7),
+        'type' => MENU_CALLBACK,
+        'access arguments' => array('administer image styles'),
+        'file' => 'resp_img.admin.inc',
+        'weight' => 15,
+      );
+    }
   }
 
   return $items;
@@ -169,55 +172,55 @@ function resp_img_settings() {
 /**
  * Save general settings.
  */
-function resp_img_settings_save($default_suffix, $block_enabled) {
+function resp_img_settings_save($default_breakpoint, $block_enabled) {
   $config = config('resp_img');
   if ($config->isNew()) {
     return FALSE;
   }
-  $config->set('default_suffix', $default_suffix);
+  $config->set('default_breakpoint', $default_breakpoint);
   $config->set('block_enabled', $block_enabled);
   $config->save();
 }
 
 /**
- * Load name of default suffix.
+ * Load name of default breakpoint.
  */
-function resp_img_suffix_default_name($theme_key = '') {
-  static $default_suffix = FALSE;
-  if ($default_suffix === FALSE) {
-    $default_suffix = '';
+function resp_img_breakpoint_default_name($theme_key = '') {
+  static $default_breakpoint = FALSE;
+  if ($default_breakpoint === FALSE) {
+    $default_breakpoint = '';
     if ($theme_key == '') {
       $theme_key = variable_get('theme_default', 'stark');
     }
     if (theme_get_setting('resp_img_use_default', $theme_key)) {
       $themes = list_themes();
-      if (isset($themes[$theme_key]->info['resp_img_default_suffix'])) {
-        $default_suffix = $themes[$theme_key]->info['resp_img_default_suffix'];
+      if (isset($themes[$theme_key]->info['resp_img_default_breakpoint'])) {
+        $default_breakpoint = $themes[$theme_key]->info['resp_img_default_breakpoint'];
       }
     }
     else {
       $config = config('resp_img');
       if (!$config->isNew()) {
-        $default_suffix = $config->get('default_suffix');
+        $default_breakpoint = $config->get('default_breakpoint');
       }
     }
   }
-  return $default_suffix;
+  return $default_breakpoint;
 }
 
 /**
- * Load default suffix.
+ * Load default breakpoint.
  */
-function resp_img_suffix_default($theme_key = '') {
-  $default_suffix = resp_img_suffix_default_name($theme_key);
-  if ($default_suffix && strpos($default_suffix, RESP_IMG_SEPARATOR) !== 0) {
-    $default_suffix = RESP_IMG_SEPARATOR . $default_suffix;
+function resp_img_breakpoint_default($theme_key = '') {
+  $default_breakpoint = resp_img_breakpoint_default_name($theme_key);
+  if ($default_breakpoint && strpos($default_breakpoint, RESP_IMG_SEPARATOR) !== 0) {
+    $default_breakpoint = RESP_IMG_SEPARATOR . $default_breakpoint;
   }
-  return $default_suffix;
+  return $default_breakpoint;
 }
 
 /**
- * Sort suffixes by weight.
+ * Sort breakpoints by weight.
  */
 function _resp_img_sort_by_weight($a, $b) {
   if (isset($a->weight) && isset($b->weight)) {
@@ -232,60 +235,60 @@ function _resp_img_sort_by_weight($a, $b) {
 /**
  * Construct config name.
  */
-function resp_img_suffix_config_name($resp_img_suffix) {
-  if (is_string($resp_img_suffix)) {
-    return $resp_img_suffix;
+function resp_img_breakpoint_config_name($resp_img_breakpoint) {
+  if (is_string($resp_img_breakpoint)) {
+    return $resp_img_breakpoint;
   }
   else {
     return 'resp_img'
-      . '.' . $resp_img_suffix->source_type
-      . '.' . $resp_img_suffix->source
-      . '.' . $resp_img_suffix->name;
+      . '.' . $resp_img_breakpoint->source_type
+      . '.' . $resp_img_breakpoint->source
+      . '.' . $resp_img_breakpoint->name;
   }
 }
 
 /**
- * Load a single suffix.
+ * Load a single breakpoint.
  */
-function resp_img_suffix_load($name, $source, $source_type) {
-  return resp_img_suffix_load_by_fullkey(resp_img_suffix_config_name($name, $source, $source_type));
+function resp_img_breakpoint_load($name, $source, $source_type) {
+  return resp_img_breakpoint_load_by_fullkey(resp_img_breakpoint_config_name($name, $source, $source_type));
 }
 
 /**
- * Load a single suffix using the full config key.
+ * Load a single breakpoint using the full config key.
  */
-function resp_img_suffix_load_by_fullkey($name) {
+function resp_img_breakpoint_load_by_fullkey($name) {
   $config = config($name);
   if ($config->isNew()) {
     return FALSE;
   }
   $data = $config->get();
-  $data += resp_img_suffix_empty_array();
+  $data += resp_img_breakpoint_empty_array();
   return (object)$data;
 }
 
 /**
- * Load all suffixes.
+ * Load all breakpoints.
  */
-function resp_img_suffix_load_all($theme_key = '') {
-  $suffixes_user = resp_img_suffix_load_all_custom();
-  $suffixes_module = resp_img_suffix_load_all_module();
-  $suffixes_theme = resp_img_suffix_load_all_theme($theme_key);
-  $suffixes = array_merge($suffixes_theme, $suffixes_module, $suffixes_user);
-  uasort($suffixes, '_resp_img_sort_by_weight');
-  return $suffixes;
+function resp_img_breakpoint_load_all($theme_key = '') {
+  $breakpoints_user = resp_img_breakpoint_load_all_custom();
+  $breakpoints_module = resp_img_breakpoint_load_all_module();
+  $breakpoints_theme = resp_img_breakpoint_load_all_theme($theme_key);
+  $breakpoints = array_merge($breakpoints_theme, $breakpoints_module, $breakpoints_user);
+  uasort($breakpoints, '_resp_img_sort_by_weight');
+  return $breakpoints;
 }
 
 /**
- * Load all enabled suffixes.
+ * Load all enabled breakpoints.
  */
-function resp_img_suffix_load_all_active($theme_key = '') {
-  $suffixes = resp_img_suffix_load_all($theme_key);
+function resp_img_breakpoint_load_all_active($theme_key = '') {
+  $breakpoints = resp_img_breakpoint_load_all($theme_key);
   $enabled = array();
-  if (!empty($suffixes)) {
-    foreach ($suffixes as $suffix_name => $suffix) {
-      if ($suffix->status) {
-        $enabled[$suffix_name] = $suffix;
+  if (!empty($breakpoints)) {
+    foreach ($breakpoints as $breakpoint_name => $breakpoint) {
+      if ($breakpoint->status) {
+        $enabled[$breakpoint_name] = $breakpoint;
       }
     }
   }
@@ -293,59 +296,59 @@ function resp_img_suffix_load_all_active($theme_key = '') {
 }
 
 /**
- * Load all suffixes by source type.
+ * Load all breakpoints by source type.
  */
-function _resp_img_suffix_load_all_by_type($source_type, $source = '') {
-  $suffixes = array();
+function _resp_img_breakpoint_load_all_by_type($source_type, $source = '') {
+  $breakpoints = array();
   // $name has to end in a dot.
   $name = 'resp_img.' . $source_type . '.';
   if (isset($source) && !empty($source)) {
     $name .= $source . '.';
   }
-  $suffix_names = config_get_storage_names_with_prefix($name);
-  foreach ($suffix_names as $suffix_name) {
-    $suffixes[$suffix_name] = resp_img_suffix_load_by_fullkey($suffix_name);
+  $breakpoint_names = config_get_storage_names_with_prefix($name);
+  foreach ($breakpoint_names as $breakpoint_name) {
+    $breakpoints[$breakpoint_name] = resp_img_breakpoint_load_by_fullkey($breakpoint_name);
   }
-  uasort($suffixes, '_resp_img_sort_by_weight');
-  return $suffixes;
+  uasort($breakpoints, '_resp_img_sort_by_weight');
+  return $breakpoints;
 }
 
 /**
- * Load all custom suffixes.
+ * Load all custom breakpoints.
  */
-function resp_img_suffix_load_all_custom() {
-  $suffixes = _resp_img_suffix_load_all_by_type(RESP_IMG_SOURCE_TYPE_CUSTOM);
-  return $suffixes;
+function resp_img_breakpoint_load_all_custom() {
+  $breakpoints = _resp_img_breakpoint_load_all_by_type(RESP_IMG_SOURCE_TYPE_CUSTOM);
+  return $breakpoints;
 }
 
 /**
- * Load all user defined suffixes.
+ * Load all user defined breakpoints.
  */
-function resp_img_suffix_load_all_module() {
-  return _resp_img_suffix_load_all_by_type(RESP_IMG_SOURCE_TYPE_MODULE);
+function resp_img_breakpoint_load_all_module() {
+  return _resp_img_breakpoint_load_all_by_type(RESP_IMG_SOURCE_TYPE_MODULE);
 }
 
 /**
- * Load all suffixes from the theme.
+ * Load all breakpoints from the theme.
  */
-function resp_img_suffix_load_all_theme($theme_key = '') {
-  return _resp_img_suffix_load_all_by_type(RESP_IMG_SOURCE_TYPE_THEME, $theme_key);
+function resp_img_breakpoint_load_all_theme($theme_key = '') {
+  return _resp_img_breakpoint_load_all_by_type(RESP_IMG_SOURCE_TYPE_THEME, $theme_key);
 }
 
 /**
- * Empty suffix object.
+ * Empty breakpoint object.
  */
-function resp_img_suffix_empty_object() {
-  return (object)resp_img_suffix_empty_array();
+function resp_img_breakpoint_empty_object() {
+  return (object)resp_img_breakpoint_empty_array();
 }
 
 /**
- * Empty suffix array.
+ * Empty breakpoint array.
  */
-function resp_img_suffix_empty_array() {
+function resp_img_breakpoint_empty_array() {
   return array(
     'name' => '',
-    'suffix' => '',
+    'breakpoint' => '',
     'breakpoint' => '',
     'source' => '',
     'source_type' => '',
@@ -358,39 +361,39 @@ function resp_img_suffix_empty_array() {
 }
 
 /**
- * Save a single suffix.
+ * Save a single breakpoint.
  */
-function resp_img_suffix_save($resp_img_suffix) {
-  $name = resp_img_suffix_config_name($resp_img_suffix);
+function resp_img_breakpoint_save($resp_img_breakpoint) {
+  $name = resp_img_breakpoint_config_name($resp_img_breakpoint);
   $config = config($name);
 
-  $config->set('name', $resp_img_suffix->name);
-  $config->set('suffix', $resp_img_suffix->suffix);
-  $config->set('breakpoint', $resp_img_suffix->breakpoint);
-  $config->set('source', $resp_img_suffix->source);
-  $config->set('source_type', $resp_img_suffix->source_type);
-  $config->set('status', $resp_img_suffix->status);
-  $config->set('weight', $resp_img_suffix->weight);
-  $config->set('multipliers', $resp_img_suffix->multipliers);
+  $config->set('name', $resp_img_breakpoint->name);
+  $config->set('breakpoint', $resp_img_breakpoint->breakpoint);
+  $config->set('breakpoint', $resp_img_breakpoint->breakpoint);
+  $config->set('source', $resp_img_breakpoint->source);
+  $config->set('source_type', $resp_img_breakpoint->source_type);
+  $config->set('status', $resp_img_breakpoint->status);
+  $config->set('weight', $resp_img_breakpoint->weight);
+  $config->set('multipliers', $resp_img_breakpoint->multipliers);
   $config->save();
 
   $data = $config->get();
-  $data += resp_img_suffix_empty_array();
+  $data += resp_img_breakpoint_empty_array();
   return (object)$data;
 }
 
 /**
- * Delete a single suffix.
+ * Delete a single breakpoint.
  */
-function resp_img_suffix_delete($suffix) {
-  $name = resp_img_suffix_config_name($suffix);
-  return resp_img_suffix_delete_by_fullkey($name);
+function resp_img_breakpoint_delete($breakpoint) {
+  $name = resp_img_breakpoint_config_name($breakpoint);
+  return resp_img_breakpoint_delete_by_fullkey($name);
 }
 
 /**
- * Delete a single suffix.
+ * Delete a single breakpoint.
  */
-function resp_img_suffix_delete_by_fullkey($name) {
+function resp_img_breakpoint_delete_by_fullkey($name) {
   $config = config($name);
   if ($config && !$config->isNew()) {
     $config->delete();
@@ -398,10 +401,10 @@ function resp_img_suffix_delete_by_fullkey($name) {
 }
 
 /**
- * Toggle status of a single suffix.
+ * Toggle status of a single breakpoint.
  */
-function resp_img_suffix_toggle_status($resp_img_suffix) {
-  $name = resp_img_suffix_config_name($resp_img_suffix);
+function resp_img_breakpoint_toggle_status($resp_img_breakpoint) {
+  $name = resp_img_breakpoint_config_name($resp_img_breakpoint);
   $config = config($name);
   if ($config && !$config->isNew()) {
     $config->set('status', !$config->get('status'));
@@ -446,7 +449,7 @@ function resp_img_breakpoint_group_name_exists($machine_name) {
 }
 
 /**
- * Load all suffix groups.
+ * Load all breakpoint groups.
  */
 function resp_img_breakpoint_group_load_all() {
   $breakpoint_groups = array();
@@ -459,7 +462,7 @@ function resp_img_breakpoint_group_load_all() {
 }
 
 /**
- * Load a single suffix group.
+ * Load a single breakpoint group.
  */
 function resp_img_breakpoint_group_load($machine_name) {
   $name = 'resp_img.' . RESP_IMG_GROUP . '.' . $machine_name;
@@ -467,7 +470,7 @@ function resp_img_breakpoint_group_load($machine_name) {
 }
 
 /**
- * Load a single suffix group using the full config key.
+ * Load a single breakpoint group using the full config key.
  */
 function resp_img_breakpoint_group_load_by_fullkey($name) {
   $config = config($name);
@@ -479,7 +482,7 @@ function resp_img_breakpoint_group_load_by_fullkey($name) {
 }
 
 /**
- * Save a single suffix group.
+ * Save a single breakpoint group.
  */
 function resp_img_breakpoint_group_save($breakpoint_group) {
   $name = 'resp_img.' . RESP_IMG_GROUP . '.' . $breakpoint_group->machine_name;
@@ -493,7 +496,7 @@ function resp_img_breakpoint_group_save($breakpoint_group) {
 }
 
 /**
- * Delete a single suffix group.
+ * Delete a single breakpoint group.
  */
 function resp_img_breakpoint_group_delete($breakpoint_group) {
   $name = 'resp_img.' . RESP_IMG_GROUP . '.' . $breakpoint_group->machine_name;
@@ -501,7 +504,7 @@ function resp_img_breakpoint_group_delete($breakpoint_group) {
 }
 
 /**
- * Delete a single suffix group by fullkey.
+ * Delete a single breakpoint group by fullkey.
  */
 function resp_img_breakpoint_group_delete_by_name($machine_name) {
   $name = 'resp_img.' . RESP_IMG_GROUP . '.' . $machine_name;
@@ -509,7 +512,7 @@ function resp_img_breakpoint_group_delete_by_name($machine_name) {
 }
 
 /**
- * Delete a single suffix group by fullkey.
+ * Delete a single breakpoint group by fullkey.
  */
 function resp_img_breakpoint_group_delete_by_fullkey($key) {
   $config = config($key);
@@ -536,7 +539,7 @@ function resp_img_add_js() {
  */
 function resp_img_theme() {
   return array(
-    'resp_img_admin_suffixes_table' => array(
+    'resp_img_admin_breakpoints_table' => array(
       'render element' => 'form',
       'theme_key' => NULL,
     ),
@@ -578,16 +581,16 @@ function resp_img_field_attach_view_alter(&$output, $context) {
         $settings = $instance['display']['default']['settings'];
       }
 
-      $suffix_styles = array();
+      $breakpoint_styles = array();
       if (isset($settings['resp_img_responsive']) && $settings['resp_img_responsive']) {
-        foreach ($settings['resp_img'] as $suffix_name => $multipliers) {
+        foreach ($settings['resp_img'] as $breakpoint_name => $multipliers) {
           if (is_array($multipliers)) {
             foreach ($multipliers as $multiplier => $image_style) {
-              if (!empty($settings['resp_img'][$suffix_name][$multiplier])) {
-                if (!isset($suffix_styles[$suffix_name])) {
-                  $suffix_styles[$suffix_name] = array();
+              if (!empty($settings['resp_img'][$breakpoint_name][$multiplier])) {
+                if (!isset($breakpoint_styles[$breakpoint_name])) {
+                  $breakpoint_styles[$breakpoint_name] = array();
                 }
-                $suffix_styles[$suffix_name][$multiplier] = $image_style;
+                $breakpoint_styles[$breakpoint_name][$multiplier] = $image_style;
               }
             }
           }
@@ -599,10 +602,10 @@ function resp_img_field_attach_view_alter(&$output, $context) {
 
       // Change the formatter on all items as well.
       $num_fields = count($element['#items']);
-      if (!empty($suffix_styles)) {
+      if (!empty($breakpoint_styles)) {
         for ($delta = 0; $delta < $num_fields; $delta++) {
           $element[$delta]['#theme'] = 'picture_formatter';
-          $element[$delta]['#breakpoints'] = $suffix_styles;
+          $element[$delta]['#breakpoints'] = $breakpoint_styles;
         }
       }
       else {
@@ -667,28 +670,28 @@ function theme_picture($variables) {
   $images = array();
   $output = array();
 
-  // User didn't map any breakpoints, use suffixes
+  // User didn't map any breakpoints, use breakpoints
   if (!is_array($variables['breakpoints'])) {
-    $default_suffix = resp_img_suffix_default();
-    if ($default_suffix && strpos($variables['style_name'], $default_suffix)) {
-      $suffixes = resp_img_suffix_load_all_active();
+    $default_breakpoint = resp_img_breakpoint_default();
+    if ($default_breakpoint && strpos($variables['style_name'], $default_breakpoint)) {
+      $breakpoints = resp_img_breakpoint_load_all_active();
       $image_styles = image_styles();
 
-      // loop over all suffixes
-      foreach ($suffixes as $suffix) {
+      // loop over all breakpoints
+      foreach ($breakpoints as $breakpoint) {
         // detect the default one
-        if ($suffix->suffix == $default_suffix) {
+        if ($breakpoint->breakpoint == $default_breakpoint) {
           $images[] = array(
             'image' => theme_image_style($variables),
           );
         }
         else {
           $new_image = $variables;
-          $new_image['style_name'] = str_replace($default_suffix, $suffix->suffix, $variables['style_name']);
+          $new_image['style_name'] = str_replace($default_breakpoint, $breakpoint->breakpoint, $variables['style_name']);
           if (array_key_exists($new_image['style_name'], $image_styles)) {
             $images[] = array(
               'image' => theme_image_style($new_image),
-              'media' => $suffix->breakpoint,
+              'media' => $breakpoint->breakpoint,
             );
           }
         }
@@ -705,9 +708,9 @@ function theme_picture($variables) {
       'image' => $img,
     );
     // all breakpoints and multipliers.
-    foreach ($variables['breakpoints'] as $suffix_name => $multipliers) {
-      $suffix = resp_img_suffix_load_by_fullkey($suffix_name);
-      if ($suffix) {
+    foreach ($variables['breakpoints'] as $breakpoint_name => $multipliers) {
+      $breakpoint = resp_img_breakpoint_load_by_fullkey($breakpoint_name);
+      if ($breakpoint) {
         $new_images = array();
         foreach ($multipliers as $multiplier => $image_style) {
           $new_image = $variables;
@@ -722,7 +725,7 @@ function theme_picture($variables) {
         if (count($new_images) == 1) {
           $images[] = array(
             'image' => $img,
-            'media' => $suffix->breakpoint,
+            'media' => $breakpoint->breakpoint,
           );
         }
         else {
@@ -733,7 +736,7 @@ function theme_picture($variables) {
           $img = preg_replace('/src="[^"]*"/', '', $img);
           $images[] = array(
             'srcset' => implode(', ', $srcset),
-            'media' => $suffix->breakpoint,
+            'media' => $breakpoint->breakpoint,
             'image' => $img,
           );
         }
@@ -793,16 +796,16 @@ function resp_img_field_formatter_info_alter(&$info) {
 function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $context) {
   if (isset($context['field']['type']) && $context['field']['type'] === 'image') {
     $settings = $context['instance']['display'][$context['view_mode']]['settings'];
-    $theme_suffixes = resp_img_suffix_load_all_active();
-    if (!empty($theme_suffixes)) {
+    $theme_breakpoints = resp_img_breakpoint_load_all_active();
+    if (!empty($theme_breakpoints)) {
       $element['resp_img_responsive'] = array(
         '#type' => 'checkbox',
         '#title' => t('Go responsive'),
         '#default_value' => isset($settings['resp_img_responsive']) ? $settings['resp_img_responsive'] : FALSE,
         // @todo: needs better wording
-        '#description' => t('If you enable this, you can select an image style for each defined suffix/breakpoint.<br />
+        '#description' => t('If you enable this, you can select an image style for each defined breakpoint/breakpoint.<br />
           The image style at the top will be used as default/fallback.<br />
-          If you leave all dropdowns empty the logic will try to use the default suffix.'),
+          If you leave all dropdowns empty the logic will try to use the default breakpoint.'),
       );
 
       $element['resp_img'] = array(
@@ -815,22 +818,22 @@ function resp_img_field_formatter_settings_form_alter(&$element, &$form_state, $
       );
 
       $image_styles = image_style_options(TRUE);
-      foreach ($theme_suffixes as $suffix_name => $suffix) {
-        $label = $suffix->name . ' [' . $suffix->breakpoint . ']';
-        $element['resp_img'][$suffix_name]['1x'] = array(
+      foreach ($theme_breakpoints as $breakpoint_name => $breakpoint) {
+        $label = $breakpoint->name . ' [' . $breakpoint->breakpoint . ']';
+        $element['resp_img'][$breakpoint_name]['1x'] = array(
           '#title' => check_plain($label),
           '#type' => 'select',
           '#options' => $image_styles,
-          '#default_value' => isset($settings['resp_img'][$suffix_name]['1x']) ? $settings['resp_img'][$suffix_name]['1x'] : '',
+          '#default_value' => isset($settings['resp_img'][$breakpoint_name]['1x']) ? $settings['resp_img'][$breakpoint_name]['1x'] : '',
         );
-        if (isset($suffix->multipliers) && !empty($suffix->multipliers)) {
-          foreach ($suffix->multipliers as $multiplier => $value) {
+        if (isset($breakpoint->multipliers) && !empty($breakpoint->multipliers)) {
+          foreach ($breakpoint->multipliers as $multiplier => $value) {
             if ($multiplier != '1x' && $value) {
-              $element['resp_img'][$suffix_name][$multiplier] = array(
+              $element['resp_img'][$breakpoint_name][$multiplier] = array(
                 '#title' => check_plain($multiplier . ' ' . $label),
                 '#type' => 'select',
                 '#options' => $image_styles,
-                '#default_value' => isset($settings['resp_img'][$suffix_name][$multiplier]) ? $settings['resp_img'][$suffix_name][$multiplier] : '',
+                '#default_value' => isset($settings['resp_img'][$breakpoint_name][$multiplier]) ? $settings['resp_img'][$breakpoint_name][$multiplier] : '',
               );
             }
           }

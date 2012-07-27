@@ -8,7 +8,7 @@
 /**
  * Admin form
  */
-function resp_img_admin_suffixes($form, &$form_state, $breakpoint_group_name = '') {
+function resp_img_admin_breakpoints($form, &$form_state, $breakpoint_group_name = '') {
 
   // Global is the same as no group name
   if ($breakpoint_group_name == 'global') {
@@ -27,60 +27,60 @@ function resp_img_admin_suffixes($form, &$form_state, $breakpoint_group_name = '
     }
   }
 
-  $form['suffixes'] = array(
+  $form['breakpoints'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
-    '#theme' => 'resp_img_admin_suffixes_table',
+    '#theme' => 'resp_img_admin_breakpoints_table',
     '#multipliers' => $multipliers,
     '#group_name' => $breakpoint_group_name,
   );
 
-  $suffixes = array();
+  $breakpoints = array();
   $breakpoint_group = resp_img_breakpoint_group_load($breakpoint_group_name);
   if ($breakpoint_group_name == '') {
-    $suffixes = resp_img_suffix_load_all();
+    $breakpoints = resp_img_breakpoint_load_all();
   }
   else {
-    foreach ($breakpoint_group->breakpoints as $suffix_name) {
-      $suffixes[$suffix_name] = resp_img_suffix_load_by_fullkey($suffix_name);
+    foreach ($breakpoint_group->breakpoints as $breakpoint_name) {
+      $breakpoints[$breakpoint_name] = resp_img_breakpoint_load_by_fullkey($breakpoint_name);
     }
   }
 
-  foreach ($suffixes as $key => $suffix) {
-    $form['suffixes'][$key] = array(
-      '#suffix_data' => $suffix,
+  foreach ($breakpoints as $key => $breakpoint) {
+    $form['breakpoints'][$key] = array(
+      '#breakpoint_data' => $breakpoint,
       'name' => array(
         '#type' => 'textfield',
-        '#default_value' => $suffix->name,
+        '#default_value' => $breakpoint->name,
         '#disabled' => TRUE,
         '#size' => 20,
       ),
       'breakpoint' => array(
         '#type' => 'textfield',
-        '#default_value' => $suffix->breakpoint,
-        '#disabled' => $suffix->source === 'theme',
+        '#default_value' => $breakpoint->breakpoint,
+        '#disabled' => $breakpoint->source === 'theme',
         '#size' => empty($multipliers) ? 60 : 30,
-        '#disabled' => $suffix->source_type == 'theme',
+        '#disabled' => $breakpoint->source_type == 'theme',
       ),
       'weight' => array(
         '#type' => 'textfield',
         '#size' => 4,
-        '#default_value' => isset($suffix->weight) ? $suffix->weight : 0,
-        '#attributes' => array('class' => array('suffixes-weight')),
+        '#default_value' => isset($breakpoint->weight) ? $breakpoint->weight : 0,
+        '#attributes' => array('class' => array('breakpoints-weight')),
       ),
     );
     // Add multipliers checkboxes if needed.
     if (!empty($multipliers)) {
-      $form['suffixes'][$key]['multipliers'] = array(
+      $form['breakpoints'][$key]['multipliers'] = array(
         '#type' => 'checkboxes',
-        '#default_value' => (isset($suffix->multipliers) && is_array($suffix->multipliers)) ? $suffix->multipliers : array(),
+        '#default_value' => (isset($breakpoint->multipliers) && is_array($breakpoint->multipliers)) ? $breakpoint->multipliers : array(),
         '#options' => $multipliers,
       );
     }
   }
 
   // Add empty row
-  $form['suffixes']['new'] = array(
+  $form['breakpoints']['new'] = array(
     'name' => array(
       '#type' => 'textfield',
       '#default_value' => '',
@@ -95,12 +95,12 @@ function resp_img_admin_suffixes($form, &$form_state, $breakpoint_group_name = '
       '#type' => 'textfield',
       '#size' => 4,
       '#default_value' => 0,
-      '#attributes' => array('class' => array('suffixes-weight')),
+      '#attributes' => array('class' => array('breakpoints-weight')),
     ),
   );
   // Add multipliers checkboxes if needed.
   if (!empty($multipliers)) {
-    $form['suffixes']['new']['multipliers'] = array(
+    $form['breakpoints']['new']['multipliers'] = array(
       '#type' => 'checkboxes',
       '#default_value' => array(),
       '#options' => $multipliers,
@@ -141,7 +141,7 @@ function resp_img_admin_suffixes($form, &$form_state, $breakpoint_group_name = '
 /**
  * Theme form as table.
  */
-function theme_resp_img_admin_suffixes_table($variables) {
+function theme_resp_img_admin_breakpoints_table($variables) {
   drupal_add_css(drupal_get_path('module', 'resp_img') . '/css/resp_img.admin.css');
   $form = $variables['form'];
   $rows = array();
@@ -151,23 +151,23 @@ function theme_resp_img_admin_suffixes_table($variables) {
     ),
   );
   foreach (element_children($form) as $key) {
-    $form[$key]['weight']['#attributes']['class'] = array('suffixes-weight');
+    $form[$key]['weight']['#attributes']['class'] = array('breakpoints-weight');
     $row = array();
     $row[] = drupal_render($form[$key]['name']);
     $row[] = drupal_render($form[$key]['breakpoint']);
     $row[] = drupal_render($form[$key]['multipliers']);
     if ($key != 'new') {
-      $suffix = $form[$key]['#suffix_data'];
-      $row[] = $suffix->source . ' (' . $suffix->source_type . ')';
-      $row[] = $suffix->status ? t('Enabled') : t('Disabled');
-      $row[] = l($suffix->status ? t('Disable') : t('Enable'), 'admin/config/media/resp_img/' . $form['#group_name'] . '/' . ($suffix->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
-      if ($suffix->source == 'user') {
+      $breakpoint = $form[$key]['#breakpoint_data'];
+      $row[] = $breakpoint->source . ' (' . $breakpoint->source_type . ')';
+      $row[] = $breakpoint->status ? t('Enabled') : t('Disabled');
+      $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/resp_img/' . $form['#group_name'] . '/' . ($breakpoint->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
+      if ($breakpoint->source == 'user') {
         $row[] = l(t('Delete'), 'admin/config/media/resp_img/' . $form['#group_name'] . '/delete/' . $key, $link_attributes);
       }
       else {
         $row[] = '';
       }
-      $class= 'resp-img-status-' . ($suffix->status ? 'enabled' : 'disabled');
+      $class= 'resp-img-status-' . ($breakpoint->status ? 'enabled' : 'disabled');
     }
     else {
       $row[] = '';
@@ -193,8 +193,8 @@ function theme_resp_img_admin_suffixes_table($variables) {
     t('Weight'),
   );
 
-  $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-suffixes')));
-  drupal_add_tabledrag('resp-img-suffixes', 'order', 'sibling', 'suffixes-weight');
+  $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-breakpoints')));
+  drupal_add_tabledrag('resp-img-breakpoints', 'order', 'sibling', 'breakpoints-weight');
 
   return $output;
 }
@@ -202,18 +202,18 @@ function theme_resp_img_admin_suffixes_table($variables) {
 /**
  * Admin form validation.
  */
-function resp_img_admin_suffixes_validate($form, &$form_state) {
+function resp_img_admin_breakpoints_validate($form, &$form_state) {
   if (strpos($form_state['triggering_element']['#id'], 'remove') === FALSE) {
-    $suffixes = $form_state['values']['suffixes'];
-    if (!empty($suffixes)) {
+    $breakpoints = $form_state['values']['breakpoints'];
+    if (!empty($breakpoints)) {
       $unique = array();
-      foreach ($suffixes as $key => $suffixdata) {
-        if (!empty($suffixdata['name'])) {
+      foreach ($breakpoints as $key => $breakpointdata) {
+        if (!empty($breakpointdata['name'])) {
           // Breakpoint is required.
-          if (empty($suffixdata['breakpoint']) && $suffixdata['breakpoint'] !== '0') {
-            form_set_error('suffixes][' . $key . '][breakpoint', 'Required');
+          if (empty($breakpointdata['breakpoint']) && $breakpointdata['breakpoint'] !== '0') {
+            form_set_error('breakpoints][' . $key . '][breakpoint', 'Required');
           }
-          $unique[$suffixdata['name']] = TRUE;
+          $unique[$breakpointdata['name']] = TRUE;
         }
       }
     }
@@ -223,32 +223,32 @@ function resp_img_admin_suffixes_validate($form, &$form_state) {
 /**
  * Admin form submit.
  */
-function resp_img_admin_suffixes_submit($form, &$form_state) {
-  $suffixes = $form_state['values']['suffixes'];
-  $saved_suffixes = array();
-  if (!empty($suffixes)) {
-    foreach ($suffixes as $suffixname => $suffixdata) {
-      if (!empty($suffixdata['name'])) {
-        $suffix = resp_img_suffix_load_by_fullkey($suffixname);
-        if ($suffix) {
-          $suffix->breakpoint = $suffixdata['breakpoint'];
-          $suffix->weight = $suffixdata['weight'];
-          $suffix->multipliers = $suffixdata['multipliers'];
-          resp_img_suffix_save($suffix);
-          $saved_suffixes[] = $suffixname;
+function resp_img_admin_breakpoints_submit($form, &$form_state) {
+  $breakpoints = $form_state['values']['breakpoints'];
+  $saved_breakpoints = array();
+  if (!empty($breakpoints)) {
+    foreach ($breakpoints as $breakpointname => $breakpointdata) {
+      if (!empty($breakpointdata['name'])) {
+        $breakpoint = resp_img_breakpoint_load_by_fullkey($breakpointname);
+        if ($breakpoint) {
+          $breakpoint->breakpoint = $breakpointdata['breakpoint'];
+          $breakpoint->weight = $breakpointdata['weight'];
+          $breakpoint->multipliers = $breakpointdata['multipliers'];
+          resp_img_breakpoint_save($breakpoint);
+          $saved_breakpoints[] = $breakpointname;
         }
         else {
-          $suffix = new StdClass();
-          $suffix->name = $suffixdata['name'];
-          $suffix->suffix = RESP_IMG_SEPARATOR . $suffix->name;
-          $suffix->breakpoint = $suffixdata['breakpoint'];
-          $suffix->source = 'user';
-          $suffix->source_type = 'custom';
-          $suffix->weight = $suffixdata['weight'];
-          $suffix->status = TRUE;
-          $suffix->multipliers = $suffixdata['multipliers'];
-          $suffix = resp_img_suffix_save($suffix);
-          $saved_suffixes[] = resp_img_suffix_config_name($suffix);
+          $breakpoint = new StdClass();
+          $breakpoint->name = $breakpointdata['name'];
+          $breakpoint->breakpoint = RESP_IMG_SEPARATOR . $breakpoint->name;
+          $breakpoint->breakpoint = $breakpointdata['breakpoint'];
+          $breakpoint->source = 'user';
+          $breakpoint->source_type = 'custom';
+          $breakpoint->weight = $breakpointdata['weight'];
+          $breakpoint->status = TRUE;
+          $breakpoint->multipliers = $breakpointdata['multipliers'];
+          $breakpoint = resp_img_breakpoint_save($breakpoint);
+          $saved_breakpoints[] = resp_img_breakpoint_config_name($breakpoint);
         }
       }
     }
@@ -256,7 +256,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
     if ($group_name != '') {
       $group = resp_img_breakpoint_group_load($group_name);
       if ($group) {
-        $group->breakpoints = $saved_suffixes;
+        $group->breakpoints = $saved_breakpoints;
         resp_img_breakpoint_group_save($group);
         dpm($group);
       }
@@ -267,7 +267,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
 /**
  * Admin action form: enable, disable, delete
  */
-function resp_img_admin_suffix_actions_form($form, &$form_state, $theme_key, $action, $breakpoint) {
+function resp_img_admin_breakpoint_actions_form($form, &$form_state, $theme_key, $action, $breakpoint) {
   $form_state['theme_key'] = $theme_key;
   $form_state['action'] = $action;
   $form_state['breakpoint'] = $breakpoint;
@@ -282,17 +282,17 @@ function resp_img_admin_suffix_actions_form($form, &$form_state, $theme_key, $ac
 /**
  * Admin action form submit
  */
-function resp_img_admin_suffix_actions_form_submit($form, &$form_state) {
+function resp_img_admin_breakpoint_actions_form_submit($form, &$form_state) {
   $theme_key = $form_state['theme_key'];
   $action = $form_state['action'];
   $breakpoint = $form_state['breakpoint'];
   switch ($action) {
     case 'delete':
-      resp_img_suffix_delete($breakpoint);
+      resp_img_breakpoint_delete($breakpoint);
       break;
     case 'enable':
     case 'disable':
-      resp_img_suffix_toggle_status($breakpoint);
+      resp_img_breakpoint_toggle_status($breakpoint);
       break;
   }
   $form_state['redirect'] = 'admin/config/media/resp_img/' . $theme_key;
@@ -316,17 +316,17 @@ function resp_img_add_style_form($form, &$form_state) {
     '#element_validate' => array('image_style_name_validate'),
     '#required' => TRUE,
   );
-  $suffixes = resp_img_suffix_load_all_active();
+  $breakpoints = resp_img_breakpoint_load_all_active();
   $options = array();
-  foreach ($suffixes as $suffix) {
-    $options[$suffix->suffix] = $suffix->name . ' (' . $suffix->suffix . ')';
+  foreach ($breakpoints as $breakpoint) {
+    $options[$breakpoint->breakpoint] = $breakpoint->name . ' (' . $breakpoint->breakpoint . ')';
   }
-  $form['suffixes'] = array(
-    '#title' => t('Suffixes'),
+  $form['breakpoints'] = array(
+    '#title' => t('breakpoints'),
     '#type' => 'checkboxes',
     '#options' => $options,
     '#default_value' => drupal_map_assoc(array_keys($options)),
-    '#description' => t('Select the suffixes to create an image style for'),
+    '#description' => t('Select the breakpoints to create an image style for'),
     '#required' => TRUE,
   );
 
@@ -338,9 +338,9 @@ function resp_img_add_style_form($form, &$form_state) {
 }
 
 function resp_img_add_style_form_validate($form, &$form_state) {
-  foreach (array_filter($form_state['values']['suffixes']) as $suffix) {
-    if (image_style_load($form_state['values']['base_name'] . $suffix)) {
-      form_set_error('suffixes', t('An image style with the name !name already exists', array('!name' => $form_state['values']['base_name'] . $suffix)));
+  foreach (array_filter($form_state['values']['breakpoints']) as $breakpoint) {
+    if (image_style_load($form_state['values']['base_name'] . $breakpoint)) {
+      form_set_error('breakpoints', t('An image style with the name !name already exists', array('!name' => $form_state['values']['base_name'] . $breakpoint)));
     }
   }
 }
@@ -350,9 +350,9 @@ function resp_img_add_style_form_submit($form, &$form_state) {
   if (!isset($base['effects'])) {
     $base['effects'] = array();
   }
-  foreach (array_filter($form_state['values']['suffixes']) as $suffix) {
+  foreach (array_filter($form_state['values']['breakpoints']) as $breakpoint) {
     $new_style = array(
-      'name' => $form_state['values']['base_name'] . $suffix,
+      'name' => $form_state['values']['base_name'] . $breakpoint,
       'effects' => $base['effects'],
     );
     image_style_save($new_style);
@@ -390,9 +390,9 @@ function resp_img_admin_breakpoint_group_edit_form($form, &$form_state, $machine
     ),
   );
 
-  $suffixes = resp_img_suffix_load_all();
-  foreach ($suffixes as $suffix_name => $suffix) {
-    $options[$suffix_name] = $suffix->name . ' [' . $suffix->breakpoint . ']';
+  $breakpoints = resp_img_breakpoint_load_all();
+  foreach ($breakpoints as $breakpoint_name => $breakpoint) {
+    $options[$breakpoint_name] = $breakpoint->name . ' [' . $breakpoint->breakpoint . ']';
   }
 
   $form['breakpoints'] = array(
