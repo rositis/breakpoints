@@ -6,11 +6,26 @@ define('BREAKPOINTS_SOURCE_TYPE_CUSTOM', 'custom');
 define('BREAKPOINTS_GROUP', 'group');
 
 /**
+ * Implements hook_ctools_plugin_directory()
+ */
+function breakpoints_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && $plugin == 'export_ui') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_ctools_plugin_api().
+ */
+function breakpoints_ctools_plugin_api($owner, $api) {
+  return array('version' => 1);
+}
+
+/**
  * Implements hook_enable().
  * Import breakpoints from all enabled themes.
  */
 function breakpoints_enable() {
-  config_install_default_config('breakpoints');
   $themes = list_themes();
   breakpoints_themes_enabled(array_keys($themes));
 }
@@ -253,13 +268,11 @@ function breakpoints_breakpoint_load($name, $source, $source_type) {
  * Load a single breakpoint using the full config key.
  */
 function breakpoints_breakpoint_load_by_fullkey($name) {
-  $config = config($name);
-  if ($config->isNew()) {
-    return FALSE;
+  ctools_include('export');
+  $result = ctools_export_load_object('breakpoints', 'names', array($name));
+  if (isset($result[$name])) {
+    return $result[$name];
   }
-  $data = $config->get();
-  $data += breakpoints_breakpoint_empty_array();
-  return (object)$data;
 }
 
 /**
@@ -294,16 +307,8 @@ function breakpoints_breakpoint_load_all_active($theme_key = '') {
  * Load all breakpoints by source type.
  */
 function _breakpoints_breakpoint_load_all_by_type($source_type, $source = '') {
-  $breakpoints = array();
-  // $name has to end in a dot.
-  $name = 'breakpoints.' . $source_type . '.';
-  if (isset($source) && !empty($source)) {
-    $name .= $source . '.';
-  }
-  $breakpoint_names = config_get_storage_names_with_prefix($name);
-  foreach ($breakpoint_names as $breakpoint_name) {
-    $breakpoints[$breakpoint_name] = breakpoints_breakpoint_load_by_fullkey($breakpoint_name);
-  }
+  ctools_include('export');
+  $breakpoints = ctools_export_load_object('breakpoints');
   uasort($breakpoints, '_breakpoints_sort_by_weight');
   return $breakpoints;
 }
@@ -358,22 +363,9 @@ function breakpoints_breakpoint_empty_array() {
 /**
  * Save a single breakpoint.
  */
-function breakpoints_breakpoint_save($breakpoints_breakpoint) {
-  $name = breakpoints_breakpoint_config_name($breakpoints_breakpoint);
-  $config = config($name);
-
-  $config->set('name', $breakpoints_breakpoint->name);
-  $config->set('breakpoint', $breakpoints_breakpoint->breakpoint);
-  $config->set('source', $breakpoints_breakpoint->source);
-  $config->set('source_type', $breakpoints_breakpoint->source_type);
-  $config->set('status', $breakpoints_breakpoint->status);
-  $config->set('weight', $breakpoints_breakpoint->weight);
-  $config->set('multipliers', $breakpoints_breakpoint->multipliers);
-  $config->save();
-
-  $data = $config->get();
-  $data += breakpoints_breakpoint_empty_array();
-  return (object)$data;
+function breakpoints_breakpoint_save($breakpoint) {
+  $update = (isset($breakpoint->id) && is_numeric($breakpoint->id)) ? array('id') : array();
+  return drupal_write_record('breakpoints', $breakpoint, $update);
 }
 
 /**
@@ -446,21 +438,19 @@ function breakpoints_breakpoint_group_name_exists($machine_name) {
  * Load all breakpoint groups.
  */
 function breakpoints_breakpoint_group_load_all() {
-  $breakpoint_groups = array();
-  $name = 'breakpoints.' . BREAKPOINTS_GROUP . '.';
-  $breakpoint_group_names = config_get_storage_names_with_prefix($name);
-  foreach ($breakpoint_group_names as $breakpoint_group_name) {
-    $breakpoint_groups[$breakpoint_group_name] = breakpoints_breakpoint_group_load_by_fullkey($breakpoint_group_name);
-  }
-  return $breakpoint_groups;
+  ctools_include('export');
+  return ctools_export_load_object('breakpoint_group');
 }
 
 /**
  * Load a single breakpoint group.
  */
 function breakpoints_breakpoint_group_load($machine_name) {
-  $name = 'breakpoints.' . BREAKPOINTS_GROUP . '.' . $machine_name;
-  return breakpoints_breakpoint_group_load_by_fullkey($name);
+  ctools_include('export');
+  $result = ctools_export_load_object('breakpoint_group', 'names', array($machine_name));
+  if (isset($result[$name])) {
+    return $result[$name];
+  }
 }
 
 /**
