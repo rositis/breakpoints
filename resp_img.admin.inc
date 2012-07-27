@@ -8,11 +8,14 @@
 /**
  * Admin form
  */
-function resp_img_admin_suffixes($form, &$form_state, $suffix_group_name = '') {
+function resp_img_admin_suffixes($form, &$form_state, $breakpoint_group_name = '') {
+
   // Global is the same as no group name
-  if ($suffix_group_name == 'global') {
-    $suffix_group_name = '';
+  if ($breakpoint_group_name == 'global') {
+    $breakpoint_group_name = '';
   }
+  $form_state['group_name'] = $breakpoint_group_name;
+
   $form = array();
 
   $settings = resp_img_settings();
@@ -27,18 +30,18 @@ function resp_img_admin_suffixes($form, &$form_state, $suffix_group_name = '') {
   $form['suffixes'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
-    '#theme_key' => $suffix_group_name,
     '#theme' => 'resp_img_admin_suffixes_table',
     '#multipliers' => $multipliers,
+    '#group_name' => $breakpoint_group_name,
   );
 
   $suffixes = array();
-  $suffix_group = resp_img_suffix_group_load($suffix_group_name);
-  if ($suffix_group_name == '') {
+  $breakpoint_group = resp_img_breakpoint_group_load($breakpoint_group_name);
+  if ($breakpoint_group_name == '') {
     $suffixes = resp_img_suffix_load_all();
   }
   else {
-    foreach ($suffix_group->breakpoints as $suffix_name) {
+    foreach ($breakpoint_group->breakpoints as $suffix_name) {
       $suffixes[$suffix_name] = resp_img_suffix_load_by_fullkey($suffix_name);
     }
   }
@@ -115,17 +118,17 @@ function resp_img_admin_suffixes($form, &$form_state, $suffix_group_name = '') {
     '#value' => t('Save'),
   );
 
-  if ($suffix_group_name != '') {
+  if ($breakpoint_group_name != '') {
     $form['buttons']['editlink'] = array(
       '#type' => 'markup',
-      '#markup' => l('Edit group breakpoints', 'admin/config/media/resp_img/groups/' . $suffix_group_name . '/edit', array(
+      '#markup' => l('Edit group breakpoints', 'admin/config/media/resp_img/groups/' . $breakpoint_group_name . '/edit', array(
         'query' => drupal_get_destination(),
       )),
     );
-    if ($suffix_group->type == RESP_IMG_SOURCE_TYPE_CUSTOM) {
+    if ($breakpoint_group->type == RESP_IMG_SOURCE_TYPE_CUSTOM) {
       $form['buttons']['deletelink'] = array(
         '#type' => 'markup',
-        '#markup' => l('Delete this group', 'admin/config/media/resp_img/groups/' . $suffix_group_name . '/delete', array(
+        '#markup' => l('Delete this group', 'admin/config/media/resp_img/groups/' . $breakpoint_group_name . '/delete', array(
           'query' => drupal_get_destination(),
         )),
       );
@@ -157,9 +160,9 @@ function theme_resp_img_admin_suffixes_table($variables) {
       $suffix = $form[$key]['#suffix_data'];
       $row[] = $suffix->source . ' (' . $suffix->source_type . ')';
       $row[] = $suffix->status ? t('Enabled') : t('Disabled');
-      $row[] = l($suffix->status ? t('Disable') : t('Enable'), 'admin/config/media/resp_img/' . $form['#theme_key'] . '/' . ($suffix->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
+      $row[] = l($suffix->status ? t('Disable') : t('Enable'), 'admin/config/media/resp_img/' . $form['#group_name'] . '/' . ($suffix->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
       if ($suffix->source == 'user') {
-        $row[] = l(t('Delete'), 'admin/config/media/resp_img/' . $form['#theme_key'] . '/delete/' . $key, $link_attributes);
+        $row[] = l(t('Delete'), 'admin/config/media/resp_img/' . $form['#group_name'] . '/delete/' . $key, $link_attributes);
       }
       else {
         $row[] = '';
@@ -222,6 +225,7 @@ function resp_img_admin_suffixes_validate($form, &$form_state) {
  */
 function resp_img_admin_suffixes_submit($form, &$form_state) {
   $suffixes = $form_state['values']['suffixes'];
+  $saved_suffixes = array();
   if (!empty($suffixes)) {
     foreach ($suffixes as $suffixname => $suffixdata) {
       if (!empty($suffixdata['name'])) {
@@ -231,6 +235,7 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
           $suffix->weight = $suffixdata['weight'];
           $suffix->multipliers = $suffixdata['multipliers'];
           resp_img_suffix_save($suffix);
+          $saved_suffixes[] = $suffixname;
         }
         else {
           $suffix = new StdClass();
@@ -239,12 +244,21 @@ function resp_img_admin_suffixes_submit($form, &$form_state) {
           $suffix->breakpoint = $suffixdata['breakpoint'];
           $suffix->source = 'user';
           $suffix->source_type = 'custom';
-          $suffix->theme = $form_state['complete_form']['suffixes']['#theme_key'];
           $suffix->weight = $suffixdata['weight'];
           $suffix->status = TRUE;
           $suffix->multipliers = $suffixdata['multipliers'];
-          resp_img_suffix_save($suffix);
+          $suffix = resp_img_suffix_save($suffix);
+          $saved_suffixes[] = resp_img_suffix_config_name($suffix);
         }
+      }
+    }
+    $group_name = $form_state['group_name'];
+    if ($group_name != '') {
+      $group = resp_img_breakpoint_group_load($group_name);
+      if ($group) {
+        $group->breakpoints = $saved_suffixes;
+        resp_img_breakpoint_group_save($group);
+        dpm($group);
       }
     }
   }
@@ -347,12 +361,12 @@ function resp_img_add_style_form_submit($form, &$form_state) {
   drupal_set_message(t('The new styles have been created'));
 }
 
-function resp_img_admin_suffix_group_edit_form($form, &$form_state, $name = '') {
+function resp_img_admin_breakpoint_group_edit_form($form, &$form_state, $machine_name = '') {
   $form = array();
-  $group = resp_img_suffix_group_load($name);
+  $group = resp_img_breakpoint_group_load($machine_name);
 
   $form_state['#breakpoint_group'] = $group;
-  $is_new = $name == '';
+  $is_new = $machine_name == '';
   $form_state['#is_new'] = $is_new;
 
   $form['name'] = array(
@@ -360,7 +374,7 @@ function resp_img_admin_suffix_group_edit_form($form, &$form_state, $name = '') 
     '#size' => '64',
     '#title' => t('group name'),
     '#required' => TRUE,
-    '#default_value' => isset($group->label) ? $group->label : '',
+    '#default_value' => isset($group->name) ? $group->name : '',
     '#disabled' => !$is_new,
   );
 
@@ -369,10 +383,10 @@ function resp_img_admin_suffix_group_edit_form($form, &$form_state, $name = '') 
     '#size' => '64',
     '#title' => t('Machine name'),
     '#required' => TRUE,
-    '#default_value' => isset($group->name) ? $group->name : '',
+    '#default_value' => isset($group->machine_name) ? $group->machine_name : '',
     '#disabled' => !$is_new,
     '#machine_name' => array(
-      'exists' => 'resp_img_suffix_group_name_exists',
+      'exists' => 'resp_img_breakpoint_group_name_exists',
     ),
   );
 
@@ -403,7 +417,7 @@ function resp_img_admin_suffix_group_edit_form($form, &$form_state, $name = '') 
   if (!$is_new && $group->type == RESP_IMG_SOURCE_TYPE_CUSTOM) {
     $form['buttons']['deletelink'] = array(
       '#type' => 'markup',
-      '#markup' => l('Delete this group', 'admin/config/media/resp_img/groups/' . $group->name . '/delete', array(
+      '#markup' => l('Delete this group', 'admin/config/media/resp_img/groups/' . $group->machine_name . '/delete', array(
         'query' => drupal_get_destination(),
       )),
     );
@@ -412,14 +426,14 @@ function resp_img_admin_suffix_group_edit_form($form, &$form_state, $name = '') 
   return $form;
 }
 
-function resp_img_admin_suffix_group_edit_form_validate($form, &$form_state) {
+function resp_img_admin_breakpoint_group_edit_form_validate($form, &$form_state) {
   $name = $form_state['values']['machine_name'];
   $label = $form_state['values']['name'];
 }
 
-function resp_img_admin_suffix_group_edit_form_submit($form, &$form_state) {
-  $name = $form_state['values']['machine_name'];
-  $label = $form_state['values']['name'];
+function resp_img_admin_breakpoint_group_edit_form_submit($form, &$form_state) {
+  $machine_name = $form_state['values']['machine_name'];
+  $name = $form_state['values']['name'];
   $breakpoints = array();
   foreach ($form_state['values']['breakpoints'] as $breakpoint => $status) {
     if ($status) {
@@ -429,42 +443,42 @@ function resp_img_admin_suffix_group_edit_form_submit($form, &$form_state) {
   $is_new = $form_state['#is_new'];
 
   if ($is_new) {
-    $new_group = resp_img_suffix_group_empty_object();
-    $new_group->label = $label;
+    $new_group = resp_img_breakpoint_group_empty_object();
+    $new_group->machine_name = $machine_name;
     $new_group->name = $name;
     $new_group->type = RESP_IMG_SOURCE_TYPE_CUSTOM;
     $new_group->breakpoints = $breakpoints;
-    resp_img_suffix_group_save($new_group);
-    menu_cache_clear();
-    $form_state['redirect'] = 'admin/config/media/resp_img/groups/' . $name;
+    resp_img_breakpoint_group_save($new_group);
+    menu_cache_clear_all();
+    $form_state['redirect'] = 'admin/config/media/resp_img/groups/' . $machine_name;
     drupal_set_message(t('The new group have been created'));
   }
   else {
-    $existing_group = resp_img_suffix_group_load($name);
+    $existing_group = resp_img_breakpoint_group_load($name);
     $existing_group->breakpoints = $breakpoints;
-    resp_img_suffix_group_save($existing_group);
+    resp_img_breakpoint_group_save($existing_group);
   }
 }
 
 /**
  * Delete a group.
  */
-function resp_img_admin_suffix_group_delete_form($form, &$form_state, $name) {
-  $group = resp_img_suffix_group_load($name);
-  $form_state['name'] = $name;
+function resp_img_admin_breakpoint_group_delete_form($form, &$form_state, $machine_name) {
+  $group = resp_img_breakpoint_group_load($machine_name);
+  $form_state['machine_name'] = $machine_name;
   $question = t('Are you sure you want to delete %group', array(
-    '%group' => $group->label,
+    '%group' => $group->name,
   ));
-  $path = 'admin/config/media/resp_img/groups/' . $name;
+  $path = 'admin/config/media/resp_img/groups/' . $machine_name;
   return confirm_form($form, $question, $path, '');
 }
 
 /**
  * Delete a group.
  */
-function resp_img_admin_suffix_group_delete_form_submit($form, &$form_state) {
-  $name = $form_state['name'];
-  resp_img_suffix_group_delete_by_name($name);
-  menu_cache_clear();
+function resp_img_admin_breakpoint_group_delete_form_submit($form, &$form_state) {
+  $machine_name = $form_state['machine_name'];
+  resp_img_breakpoint_group_delete_by_name($machine_name);
+  menu_cache_clear_all();
   $form_state['redirect'] = 'admin/config/media/resp_img/groups';
 }
