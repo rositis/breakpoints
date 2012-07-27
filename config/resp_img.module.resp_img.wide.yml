@@ -1,6 +1,0 @@
-name: wide
-suffix: __wide
-breakpoint: '(min-width: 960px)'
-source_type: module
-source: resp_img
-status: FALSE

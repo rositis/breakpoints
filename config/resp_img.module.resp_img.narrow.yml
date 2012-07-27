@@ -1,6 +1,0 @@
-name: narrow
-suffix: __narrow
-breakpoint: '(min-width: 560px)'
-source_type: module
-source: resp_img
-status: FALSE
