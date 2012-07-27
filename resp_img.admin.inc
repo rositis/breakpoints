@@ -8,10 +8,7 @@
 /**
  * Admin form
  */
-function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
-  if ($theme_key == '') {
-    $theme_key = variable_get('theme_default', 'stark');
-  }
+function resp_img_admin_suffixes($form, &$form_state, $suffix_group_name = '') {
   $form = array();
 
   $settings = resp_img_settings();
@@ -26,12 +23,23 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
   $form['suffixes'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
-    '#theme_key' => $theme_key,
+    '#theme_key' => $suffix_group_name,
     '#theme' => 'resp_img_admin_suffixes_table',
     '#multipliers' => $multipliers,
   );
 
-  $suffixes = resp_img_suffix_load_all($theme_key);
+  $suffixes = array();
+  if ($suffix_group_name == '' || $suffix_group_name == 'global') {
+    $suffixes = resp_img_suffix_load_all();
+  }
+  else {
+    $suffix_group = resp_img_suffix_group_load($suffix_group_name);
+    dpm($suffix_group);
+    foreach ($suffix_group->breakpoints as $suffix_name) {
+      $suffixes[$suffix_name] = resp_img_suffix_load_by_fullkey($suffix_name);
+    }
+  }
+  dpm($suffixes);
   foreach ($suffixes as $key => $suffix) {
     $form['suffixes'][$key] = array(
       '#suffix_data' => $suffix,
@@ -58,7 +66,7 @@ function resp_img_admin_suffixes($form, &$form_state, $theme_key = '') {
     if (!empty($multipliers)) {
       $form['suffixes'][$key]['multipliers'] = array(
         '#type' => 'checkboxes',
-        '#default_value' => isset($suffix->multipliers) ? $suffix->multipliers : array(),
+        '#default_value' => (isset($suffix->multipliers) && is_array($suffix->multipliers)) ? $suffix->multipliers : array(),
         '#options' => $multipliers,
       );
     }
