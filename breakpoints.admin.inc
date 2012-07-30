@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Admin settings
+ * Breakpoints - admin settings
  */
 
 /**
@@ -42,7 +42,10 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
   }
   else {
     foreach ($breakpoint_group->breakpoints as $breakpoint_name) {
-      $breakpoints[$breakpoint_name] = breakpoints_breakpoint_load_by_fullkey($breakpoint_name);
+      $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint_name);
+      if ($breakpoint && isset($breakpoint->machine_name)) {
+        $breakpoints[$breakpoint_name] = $breakpoint;
+      }
     }
   }
 
@@ -121,14 +124,14 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
   if ($breakpoint_group_name != '') {
     $form['buttons']['editlink'] = array(
       '#type' => 'markup',
-      '#markup' => l('Edit group breakpoints', 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit', array(
+      '#markup' => l(t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit', array(
         'query' => drupal_get_destination(),
       )),
     );
     if ($breakpoint_group->type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
       $form['buttons']['deletelink'] = array(
         '#type' => 'markup',
-        '#markup' => l('Delete this group', 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/delete', array(
+        '#markup' => l(t('Delete this group'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/delete', array(
           'query' => drupal_get_destination(),
         )),
       );
@@ -160,9 +163,19 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
       $breakpoint = $form[$key]['#breakpoint_data'];
       $row[] = $breakpoint->source . ' (' . $breakpoint->source_type . ')';
       $row[] = $breakpoint->status ? t('Enabled') : t('Disabled');
-      $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/breakpoints/' . $form['#group_name'] . '/' . ($breakpoint->status ? 'disable' : 'enable'). '/' . $key, $link_attributes);
+      if (!empty($form['#group_name'])) {
+        $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/breakpoints/groups/' . $form['#group_name'] . '/' . ($breakpoint->status ? 'disable' : 'enable') . '/' . $key, $link_attributes);
+      }
+      else {
+        $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/breakpoints/' . ($breakpoint->status ? 'disable' : 'enable') . '/' . $key, $link_attributes);
+      }
       if ($breakpoint->source == 'user') {
-        $row[] = l(t('Delete'), 'admin/config/media/breakpoints/' . $form['#group_name'] . '/delete/' . $key, $link_attributes);
+        if (!empty($form['#group_name'])) {
+          $row[] = l(t('Delete'), 'admin/config/media/breakpoints/groups/' . $form['#group_name'] . '/delete/' . $key, $link_attributes);
+        }
+        else {
+          $row[] = l(t('Delete'), 'admin/config/media/breakpoints/delete/' . $key, $link_attributes);
+        }
       }
       else {
         $row[] = '';
@@ -181,7 +194,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
       'data' => $row,
       'class' => array('draggable', $class),
     );
-   }
+  }
 
   $header =  array(
     t('Name'),
@@ -238,7 +251,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
           $saved_breakpoints[] = $breakpointname;
         }
         else {
-          $breakpoint = new StdClass();
+          $breakpoint = new stdClass();
           $breakpoint->name = $breakpointdata['name'];
           $breakpoint->breakpoint = BREAKPOINTS_SEPARATOR . $breakpoint->name;
           $breakpoint->breakpoint = $breakpointdata['breakpoint'];
@@ -258,7 +271,6 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
       if ($group) {
         $group->breakpoints = $saved_breakpoints;
         breakpoints_breakpoint_group_save($group);
-        dpm($group);
       }
     }
   }
@@ -267,15 +279,20 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
 /**
  * Admin action form: enable, disable, delete
  */
-function breakpoints_admin_breakpoint_actions_form($form, &$form_state, $theme_key, $action, $breakpoint) {
-  $form_state['theme_key'] = $theme_key;
+function breakpoints_admin_breakpoint_actions_form($form, &$form_state, $group_name, $action, $breakpoint) {
+  $form_state['group_name'] = $group_name;
   $form_state['action'] = $action;
   $form_state['breakpoint'] = $breakpoint;
   $question = t('Are you sure you want to %action %breakpoint', array(
     '%action' => $action,
     '%breakpoint' => $breakpoint,
   ));
-  $path = 'admin/config/media/breakpoints/' . $theme_key;
+  if (!empty($group_name)) {
+    $path = 'admin/config/media/breakpoints/groups/' . $group_name;
+  }
+  else {
+    $path = 'admin/config/media/breakpoints';
+  }
   return confirm_form($form, $question, $path, '');
 }
 
@@ -283,19 +300,24 @@ function breakpoints_admin_breakpoint_actions_form($form, &$form_state, $theme_k
  * Admin action form submit
  */
 function breakpoints_admin_breakpoint_actions_form_submit($form, &$form_state) {
-  $theme_key = $form_state['theme_key'];
+  $group_name = $form_state['group_name'];
   $action = $form_state['action'];
   $breakpoint = $form_state['breakpoint'];
   switch ($action) {
     case 'delete':
-      breakpoints_breakpoint_delete($breakpoint);
+      breakpoints_breakpoint_delete_by_fullkey($breakpoint);
       break;
     case 'enable':
     case 'disable':
       breakpoints_breakpoint_toggle_status($breakpoint);
       break;
   }
-  $form_state['redirect'] = 'admin/config/media/breakpoints/' . $theme_key;
+  if (!empty($group_name)) {
+    $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $group_name;
+  }
+  else {
+    $form_state['redirect'] = 'admin/config/media/breakpoints';
+  }
 }
 
 function breakpoints_add_style_form($form, &$form_state) {
@@ -364,7 +386,7 @@ function breakpoints_add_style_form_submit($form, &$form_state) {
 function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $machine_name = '') {
   $form = array();
   $group = breakpoints_breakpoint_group_load($machine_name);
-
+dpm($group);
   $form_state['#breakpoint_group'] = $group;
   $is_new = $machine_name == '';
   $form_state['#is_new'] = $is_new;
@@ -417,7 +439,7 @@ function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $mach
   if (!$is_new && $group->type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
     $form['buttons']['deletelink'] = array(
       '#type' => 'markup',
-      '#markup' => l('Delete this group', 'admin/config/media/breakpoints/groups/' . $group->machine_name . '/delete', array(
+      '#markup' => l(t('Delete this group'), 'admin/config/media/breakpoints/groups/' . $group->machine_name . '/delete', array(
         'query' => drupal_get_destination(),
       )),
     );
@@ -449,7 +471,7 @@ function breakpoints_admin_breakpoint_group_edit_form_submit($form, &$form_state
     $new_group->type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
     $new_group->breakpoints = $breakpoints;
     breakpoints_breakpoint_group_save($new_group);
-    menu_cache_clear_all();
+    cache_clear_all();
     $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $machine_name;
     drupal_set_message(t('The new group have been created'));
   }

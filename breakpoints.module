@@ -1,12 +1,17 @@
 <?php
 
+/**
+ * @file
+ * Breakpoints
+ */
+
 define('BREAKPOINTS_SOURCE_TYPE_THEME', 'theme');
 define('BREAKPOINTS_SOURCE_TYPE_MODULE', 'module');
 define('BREAKPOINTS_SOURCE_TYPE_CUSTOM', 'custom');
 define('BREAKPOINTS_GROUP', 'group');
 
 /**
- * Implements hook_ctools_plugin_directory()
+ * Implements hook_ctools_plugin_directory().
  */
 function breakpoints_ctools_plugin_directory($module, $plugin) {
   if ($module == 'ctools' && $plugin == 'export_ui') {
@@ -54,8 +59,9 @@ function breakpoints_themes_enabled($theme_list) {
         $breakpoint->theme = '';
         $breakpoint->status = TRUE;
         $breakpoint->weight = $weight++;
+        $breakpoint->machine_name = breakpoints_breakpoint_config_name($breakpoint);
         breakpoints_breakpoint_save($breakpoint);
-        $breakpoint_group->breakpoints[] = breakpoints_breakpoint_config_name($breakpoint);
+        $breakpoint_group->breakpoints[] = $breakpoint->machine_name;
       }
       breakpoints_breakpoint_group_save($breakpoint_group);
     }
@@ -127,6 +133,13 @@ function breakpoints_menu() {
     'file' => 'breakpoints.admin.inc',
     'weight' => 99,
   );
+  $items['admin/config/media/breakpoints/%/%'] = array(
+    'page arguments' => array('breakpoints_admin_breakpoint_actions_form', '', 4, 5),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('administer image styles'),
+    'file' => 'breakpoints.admin.inc',
+    'weight' => 15,
+  );
 
   $breakpoint_groups = breakpoints_breakpoint_group_load_all();
   foreach ($breakpoint_groups as $breakpoint_group_name => $breakpoint_group) {
@@ -172,61 +185,19 @@ function breakpoints_menu() {
  * Load general settings.
  */
 function breakpoints_settings() {
-  $config = config('breakpoints');
-  if ($config->isNew()) {
-    return FALSE;
-  }
-  return (object)$config->get();
+  $config = new StdClass;
+  $config->default_breakpoint = variable_get('default_breakpoint', '');
+  $config->block_enabled = variable_get('block_enabled', FALSE);
+  $config->multipliers = variable_get('multipliers', array('1x', '1.5x', '2x'));
+  return $config;
 }
 
 /**
  * Save general settings.
  */
 function breakpoints_settings_save($default_breakpoint, $block_enabled) {
-  $config = config('breakpoints');
-  if ($config->isNew()) {
-    return FALSE;
-  }
-  $config->set('default_breakpoint', $default_breakpoint);
-  $config->set('block_enabled', $block_enabled);
-  $config->save();
-}
-
-/**
- * Load name of default breakpoint.
- */
-function breakpoints_breakpoint_default_name($theme_key = '') {
-  static $default_breakpoint = FALSE;
-  if ($default_breakpoint === FALSE) {
-    $default_breakpoint = '';
-    if ($theme_key == '') {
-      $theme_key = variable_get('theme_default', 'stark');
-    }
-    if (theme_get_setting('breakpoints_use_default', $theme_key)) {
-      $themes = list_themes();
-      if (isset($themes[$theme_key]->info['breakpoints_default_breakpoint'])) {
-        $default_breakpoint = $themes[$theme_key]->info['breakpoints_default_breakpoint'];
-      }
-    }
-    else {
-      $config = config('breakpoints');
-      if (!$config->isNew()) {
-        $default_breakpoint = $config->get('default_breakpoint');
-      }
-    }
-  }
-  return $default_breakpoint;
-}
-
-/**
- * Load default breakpoint.
- */
-function breakpoints_breakpoint_default($theme_key = '') {
-  $default_breakpoint = breakpoints_breakpoint_default_name($theme_key);
-  if ($default_breakpoint && strpos($default_breakpoint, BREAKPOINTS_SEPARATOR) !== 0) {
-    $default_breakpoint = BREAKPOINTS_SEPARATOR . $default_breakpoint;
-  }
-  return $default_breakpoint;
+  variable_set('default_breakpoint', $default_breakpoint);
+  variable_set('block_enabled', $block_enabled);
 }
 
 /**
@@ -267,11 +238,16 @@ function breakpoints_breakpoint_load($name, $source, $source_type) {
 /**
  * Load a single breakpoint using the full config key.
  */
-function breakpoints_breakpoint_load_by_fullkey($name) {
-  ctools_include('export');
-  $result = ctools_export_load_object('breakpoints', 'names', array($name));
-  if (isset($result[$name])) {
-    return $result[$name];
+function breakpoints_breakpoint_load_by_fullkey($machine_name) {
+  $sql = 'SELECT * FROM {breakpoints} WHERE machine_name = :machine_name';
+  $result = db_query($sql, array(':machine_name' => $machine_name));
+  if ($result) {
+    $data = $result->fetchObject();
+    $data->multipliers = unserialize($data->multipliers);
+    return $data;
+  }
+  else {
+    return FALSE;
   }
 }
 
@@ -307,10 +283,24 @@ function breakpoints_breakpoint_load_all_active($theme_key = '') {
  * Load all breakpoints by source type.
  */
 function _breakpoints_breakpoint_load_all_by_type($source_type, $source = '') {
-  ctools_include('export');
-  $breakpoints = ctools_export_load_object('breakpoints');
-  uasort($breakpoints, '_breakpoints_sort_by_weight');
-  return $breakpoints;
+  $sql = 'SELECT * FROM {breakpoints} WHERE source_type = :source_type';
+  $arg = array(':source_type' => $source_type);
+  if (!empty($source)) {
+    $sql .= ' AND source = :source';
+    $arg[':source'] = $source;
+  }
+  $result = db_query($sql, $arg);
+  if ($result) {
+    $breakpoints = array();
+    while ($data = $result->fetchObject()) {
+      $data->multipliers = unserialize($data->multipliers);
+      $breakpoints[$data->machine_name] = $data;
+    }
+    return $breakpoints;
+  }
+  else {
+    return FALSE;
+  }
 }
 
 /**
@@ -364,8 +354,13 @@ function breakpoints_breakpoint_empty_array() {
  * Save a single breakpoint.
  */
 function breakpoints_breakpoint_save($breakpoint) {
+  if (!isset($breakpoint->machine_name) || empty($breakpoint->machine_name)) {
+    $breakpoint->machine_name = breakpoints_breakpoint_config_name($breakpoint);
+  }
   $update = (isset($breakpoint->id) && is_numeric($breakpoint->id)) ? array('id') : array();
-  return drupal_write_record('breakpoints', $breakpoint, $update);
+  $breakpoint->multipliers = serialize($breakpoint->multipliers);
+  $record = drupal_write_record('breakpoints', $breakpoint, $update);
+  $record->multipliers = unserialize($record->multipliers);
 }
 
 /**
@@ -379,22 +374,21 @@ function breakpoints_breakpoint_delete($breakpoint) {
 /**
  * Delete a single breakpoint.
  */
-function breakpoints_breakpoint_delete_by_fullkey($name) {
-  $config = config($name);
-  if ($config && !$config->isNew()) {
-    $config->delete();
+function breakpoints_breakpoint_delete_by_fullkey($key) {
+  if (!empty($key)) {
+    $sql = "DELETE FROM {breakpoints} where machine_name = :key";
+    db_query($sql, array(':key' => $key));
   }
 }
 
 /**
  * Toggle status of a single breakpoint.
  */
-function breakpoints_breakpoint_toggle_status($breakpoints_breakpoint) {
-  $name = breakpoints_breakpoint_config_name($breakpoints_breakpoint);
-  $config = config($name);
-  if ($config && !$config->isNew()) {
-    $config->set('status', !$config->get('status'));
-    $config->save();
+function breakpoints_breakpoint_toggle_status($machine_name) {
+  $breakpoint = breakpoints_breakpoint_load_by_fullkey($machine_name);
+  if ($breakpoint) {
+    $breakpoint->status = !$breakpoint->status;
+    breakpoints_breakpoint_save($breakpoint);
   }
 }
 
@@ -438,52 +432,69 @@ function breakpoints_breakpoint_group_name_exists($machine_name) {
  * Load all breakpoint groups.
  */
 function breakpoints_breakpoint_group_load_all() {
-  ctools_include('export');
-  return ctools_export_load_object('breakpoint_group');
+  $sql = 'SELECT * FROM {breakpoint_group}';
+  $result = db_query($sql);
+  if ($result) {
+    $breakpoint_groups = array();
+    while ($data = $result->fetchObject()) {
+      $data->breakpoints = unserialize($data->breakpoints);
+      $breakpoint_groups[$data->machine_name] = $data;
+    }
+    return $breakpoint_groups;
+  }
+  else {
+    return FALSE;
+  }
 }
 
 /**
  * Load a single breakpoint group.
  */
-function breakpoints_breakpoint_group_load($machine_name) {
-  ctools_include('export');
-  $result = ctools_export_load_object('breakpoint_group', 'names', array($machine_name));
-  if (isset($result[$name])) {
-    return $result[$name];
+function breakpoints_breakpoint_group_load($name) {
+  $sql = 'SELECT * FROM {breakpoint_group} WHERE name = :name';
+  $result = db_query($sql, array(':name' => $name));
+  if ($result) {
+    $data = $result->fetchObject();
+    $data->breakpoints = unserialize($data->breakpoints);
+    return $data;
+  }
+  else {
+    return FALSE;
   }
 }
 
 /**
  * Load a single breakpoint group using the full config key.
  */
-function breakpoints_breakpoint_group_load_by_fullkey($name) {
-  $config = config($name);
-  if ($config->isNew()) {
+function breakpoints_breakpoint_group_load_by_fullkey($key) {
+  $sql = 'SELECT * FROM {breakpoint_group} WHERE machine_name = :key';
+  $result = db_query($sql, array(':key' => $key));
+  if ($result) {
+    $data = $result->fetchObject();
+    $data->breakpoints = unserialize($data->breakpoints);
+    return $data;
+  }
+  else {
     return FALSE;
   }
-  $data = $config->get();
-  return (object)$data;
 }
 
 /**
  * Save a single breakpoint group.
  */
 function breakpoints_breakpoint_group_save($breakpoint_group) {
-  $name = 'breakpoints.' . BREAKPOINTS_GROUP . '.' . $breakpoint_group->machine_name;
-  $config = config($name);
-
-  $config->set('machine_name', $breakpoint_group->machine_name);
-  $config->set('name', $breakpoint_group->name);
-  $config->set('type', $breakpoint_group->type);
-  $config->set('breakpoints', $breakpoint_group->breakpoints); // weight + key
-  $config->save();
+  $update = (isset($breakpoint_group->id) && is_numeric($breakpoint_group->id)) ? array('id') : array();
+  $breakpoint_group->breakpoints = serialize($breakpoint_group->breakpoints);
+  $record = drupal_write_record('breakpoint_group', $breakpoint_group, $update);
+  $record->breakpoints = unserialize($record->breakpoints);
+  return $record;
 }
 
 /**
  * Delete a single breakpoint group.
  */
 function breakpoints_breakpoint_group_delete($breakpoint_group) {
-  $name = 'breakpoints.' . BREAKPOINTS_GROUP . '.' . $breakpoint_group->machine_name;
+  $name = $breakpoint_group->machine_name;
   return breakpoints_breakpoint_group_delete_by_fullkey($name);
 }
 
@@ -491,7 +502,7 @@ function breakpoints_breakpoint_group_delete($breakpoint_group) {
  * Delete a single breakpoint group by fullkey.
  */
 function breakpoints_breakpoint_group_delete_by_name($machine_name) {
-  $name = 'breakpoints.' . BREAKPOINTS_GROUP . '.' . $machine_name;
+  $name = $machine_name;
   return breakpoints_breakpoint_group_delete_by_fullkey($name);
 }
 
@@ -499,9 +510,9 @@ function breakpoints_breakpoint_group_delete_by_name($machine_name) {
  * Delete a single breakpoint group by fullkey.
  */
 function breakpoints_breakpoint_group_delete_by_fullkey($key) {
-  $config = config($key);
-  if ($config && !$config->isNew()) {
-    $config->delete();
+  if (!empty($key)) {
+    $sql = "DELETE FROM {breakpoint_group} where machine_name = :key";
+    db_query($sql, array(':key' => $key));
   }
 }
 
