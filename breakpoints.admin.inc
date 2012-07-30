@@ -260,7 +260,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
           $breakpoint->weight = $breakpointdata['weight'];
           $breakpoint->status = TRUE;
           $breakpoint->multipliers = $breakpointdata['multipliers'];
-          $breakpoint = breakpoints_breakpoint_save($breakpoint);
+          breakpoints_breakpoint_save($breakpoint);
           $saved_breakpoints[] = breakpoints_breakpoint_config_name($breakpoint);
         }
       }
@@ -386,7 +386,7 @@ function breakpoints_add_style_form_submit($form, &$form_state) {
 function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $machine_name = '') {
   $form = array();
   $group = breakpoints_breakpoint_group_load($machine_name);
-dpm($group);
+
   $form_state['#breakpoint_group'] = $group;
   $is_new = $machine_name == '';
   $form_state['#is_new'] = $is_new;
@@ -471,7 +471,7 @@ function breakpoints_admin_breakpoint_group_edit_form_submit($form, &$form_state
     $new_group->type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
     $new_group->breakpoints = $breakpoints;
     breakpoints_breakpoint_group_save($new_group);
-    cache_clear_all();
+    menu_rebuild();
     $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $machine_name;
     drupal_set_message(t('The new group have been created'));
   }
@@ -501,6 +501,6 @@ function breakpoints_admin_breakpoint_group_delete_form($form, &$form_state, $ma
 function breakpoints_admin_breakpoint_group_delete_form_submit($form, &$form_state) {
   $machine_name = $form_state['machine_name'];
   breakpoints_breakpoint_group_delete_by_name($machine_name);
-  menu_cache_clear_all();
-  $form_state['redirect'] = 'admin/config/media/breakpoints/groups';
+  menu_rebuild();
+  $form_state['redirect'] = 'admin/config/media/breakpoints';
 }

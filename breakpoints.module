@@ -11,6 +11,18 @@ define('BREAKPOINTS_SOURCE_TYPE_CUSTOM', 'custom');
 define('BREAKPOINTS_GROUP', 'group');
 
 /**
+ * Implements hook_permission().
+ */
+function breakpoints_permission() {
+  return array(
+    'administer breakpoints' => array(
+      'title' => t('Administer Breakpoints'),
+      'description' => t('Administer all breakpoints'),
+    ),
+  );
+}
+
+/**
  * Implements hook_ctools_plugin_directory().
  */
 function breakpoints_ctools_plugin_directory($module, $plugin) {
@@ -64,8 +76,13 @@ function breakpoints_themes_enabled($theme_list) {
         $breakpoint_group->breakpoints[] = $breakpoint->machine_name;
       }
       breakpoints_breakpoint_group_save($breakpoint_group);
+      drupal_set_message(t('The breakpoints from theme %theme are imported and !grouplink.', array(
+        '%theme' => $themes[$theme_key]->info['name'],
+        '!grouplink' => l(t('a new group is created'), 'admin/config/media/breakpoints/groups/' . $theme_key),
+      )), 'status');
     }
   }
+  menu_rebuild();
 }
 
 /**
@@ -81,7 +98,7 @@ function breakpoints_themes_disabled($theme_list) {
     }
     breakpoints_breakpoint_group_delete_by_name($theme_key);
   }
-  menu_cache_clear_all();
+  menu_rebuild();
 }
 
 /**
@@ -97,7 +114,7 @@ function breakpoints_menu() {
     'description' => 'Manage breakpoints',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('breakpoints_admin_breakpoints'),
-    'access arguments' => array('administer image styles'),
+    'access arguments' => array('administer breakpoints'),
     'file' => 'breakpoints.admin.inc',
     'weight' => 10,
   );
@@ -107,7 +124,7 @@ function breakpoints_menu() {
     'description' => 'Add a responsive image style',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('breakpoints_add_style_form'),
-    'access arguments' => array('administer image styles'),
+    'access arguments' => array('administer breakpoints'),
     'file' => 'breakpoints.admin.inc',
     'type' => MENU_LOCAL_TASK,
     'weight' => 30,
@@ -129,14 +146,14 @@ function breakpoints_menu() {
     'title' => 'Add a new group',
     'page arguments' => array('breakpoints_admin_breakpoint_group_edit_form'),
     'type' => MENU_LOCAL_TASK,
-    'access arguments' => array('administer image styles'),
+    'access arguments' => array('administer breakpoints'),
     'file' => 'breakpoints.admin.inc',
     'weight' => 99,
   );
   $items['admin/config/media/breakpoints/%/%'] = array(
     'page arguments' => array('breakpoints_admin_breakpoint_actions_form', '', 4, 5),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('administer image styles'),
+    'access arguments' => array('administer breakpoints'),
     'file' => 'breakpoints.admin.inc',
     'weight' => 15,
   );
@@ -148,7 +165,7 @@ function breakpoints_menu() {
         'title' => $breakpoint_group->name,
         'page arguments' => array('breakpoints_admin_breakpoints', $breakpoint_group->machine_name),
         'type' => MENU_LOCAL_TASK,
-        'access arguments' => array('administer image styles'),
+        'access arguments' => array('administer breakpoints'),
         'file' => 'breakpoints.admin.inc',
         'weight' => 15,
       );
@@ -156,7 +173,7 @@ function breakpoints_menu() {
         'title' => 'Edit ' . $breakpoint_group->name,
         'page arguments' => array('breakpoints_admin_breakpoint_group_edit_form', $breakpoint_group->machine_name),
         'type' => MENU_CALLBACK,
-        'access arguments' => array('administer image styles'),
+        'access arguments' => array('administer breakpoints'),
         'file' => 'breakpoints.admin.inc',
         'weight' => 15,
       );
@@ -164,14 +181,14 @@ function breakpoints_menu() {
         'title' => 'Delete ' . $breakpoint_group->name,
         'page arguments' => array('breakpoints_admin_breakpoint_group_delete_form', $breakpoint_group->machine_name),
         'type' => MENU_CALLBACK,
-        'access arguments' => array('administer image styles'),
+        'access arguments' => array('administer breakpoints'),
         'file' => 'breakpoints.admin.inc',
         'weight' => 15,
       );
       $items['admin/config/media/breakpoints/groups/' . $breakpoint_group->machine_name . '/%/%'] = array(
         'page arguments' => array('breakpoints_admin_breakpoint_actions_form', $breakpoint_group->machine_name, 6, 7),
         'type' => MENU_CALLBACK,
-        'access arguments' => array('administer image styles'),
+        'access arguments' => array('administer breakpoints'),
         'file' => 'breakpoints.admin.inc',
         'weight' => 15,
       );
@@ -186,18 +203,15 @@ function breakpoints_menu() {
  */
 function breakpoints_settings() {
   $config = new StdClass;
-  $config->default_breakpoint = variable_get('default_breakpoint', '');
-  $config->block_enabled = variable_get('block_enabled', FALSE);
-  $config->multipliers = variable_get('multipliers', array('1x', '1.5x', '2x'));
+  $config->multipliers = variable_get('breakpoints_multipliers', array('1x', '1.5x', '2x'));
   return $config;
 }
 
 /**
  * Save general settings.
  */
-function breakpoints_settings_save($default_breakpoint, $block_enabled) {
-  variable_set('default_breakpoint', $default_breakpoint);
-  variable_set('block_enabled', $block_enabled);
+function breakpoints_settings_save($multipliers) {
+  variable_set('breakpoints_multipliers', $multipliers);
 }
 
 /**
@@ -336,17 +350,16 @@ function breakpoints_breakpoint_empty_object() {
  * Empty breakpoint array.
  */
 function breakpoints_breakpoint_empty_array() {
+  $config = breakpoints_settings();
   return array(
     'name' => '',
-    'breakpoint' => '',
+    'machine_name' => '',
     'breakpoint' => '',
     'source' => '',
     'source_type' => '',
-    'theme' => '',
-    'status' => '',
+    'status' => TRUE,
     'weight' => 0,
-    'theme' => '',
-    'multipliers' => '',
+    'multipliers' => array(),
   );
 }
 
@@ -359,8 +372,7 @@ function breakpoints_breakpoint_save($breakpoint) {
   }
   $update = (isset($breakpoint->id) && is_numeric($breakpoint->id)) ? array('id') : array();
   $breakpoint->multipliers = serialize($breakpoint->multipliers);
-  $record = drupal_write_record('breakpoints', $breakpoint, $update);
-  $record->multipliers = unserialize($record->multipliers);
+  drupal_write_record('breakpoints', $breakpoint, $update);
 }
 
 /**
@@ -485,9 +497,7 @@ function breakpoints_breakpoint_group_load_by_fullkey($key) {
 function breakpoints_breakpoint_group_save($breakpoint_group) {
   $update = (isset($breakpoint_group->id) && is_numeric($breakpoint_group->id)) ? array('id') : array();
   $breakpoint_group->breakpoints = serialize($breakpoint_group->breakpoints);
-  $record = drupal_write_record('breakpoint_group', $breakpoint_group, $update);
-  $record->breakpoints = unserialize($record->breakpoints);
-  return $record;
+  drupal_write_record('breakpoint_group', $breakpoint_group, $update);
 }
 
 /**

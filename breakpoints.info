@@ -3,3 +3,4 @@ description = Manage breakpoints
 core = 7.x
 dependencies[] = ctools
 files[] = breakpoints.module
+configure = admin/config/media/breakpoints
