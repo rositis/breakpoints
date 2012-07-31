@@ -410,6 +410,15 @@ function breakpoints_breakpoint_toggle_status($machine_name) {
   }
 }
 
+/**
+ * Check if a breakpoint name already exists.
+ */
+function breakpoints_breakpoint_name_exists($machine_name) {
+  // Check if group name is used before.
+  $breakpoints = breakpoints_breakpoint_load_all_custom();
+  $fullkey = 'custom.user.' . $machine_name;
+  return array_key_exists($fullkey, $breakpoints);
+}
 
 /**
  * Empty breakpoint group object.

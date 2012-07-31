@@ -11,9 +11,12 @@
 function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_name = '') {
 
   // Global is the same as no group name
-  if ($breakpoint_group_name == 'global') {
+  $global = FALSE;
+  if ($breakpoint_group_name == '' || $breakpoint_group_name == 'global') {
     $breakpoint_group_name = '';
+    $global = TRUE;
   }
+
   $form_state['group_name'] = $breakpoint_group_name;
 
   $form = array();
@@ -27,6 +30,41 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
     }
   }
 
+  if ($global) {
+    $form['info'] = array(
+      '#type' => 'markup',
+      '#markup' => t("You can manage all your breakpoints on this screen, if one of your themes has breakpoints defined inside the .info file they will be shown here."),
+    );
+
+    $info = array();
+    $info[] = t("To create a new breakpoint, you have to enter a name and a media query (ex. (min-width: 15em)).");
+    $info[] = t("All breakpoints can be enabled or disabled so they cannot be used by other modules.");
+    $info[] = t("For each breakpoint you can define what multipliers have to be available (needed to support 'retina' displays).");
+    $info[] = t("Breakpoints you created yourself can be deleted.");
+    $info[] = t("You can group multiple breakpoints in a group by using '!add', so other modules can easily interact with them.", array('!add' => l(t('Add a new group'), 'admin/config/media/breakpoints/groups/add')));
+
+    $form['more_info'] = array(
+      '#type' => 'container',
+      '#theme' => 'item_list',
+      '#items' => $info,
+    );
+  }
+  else {
+    $form['info'] = array(
+      '#type' => 'markup',
+      '#markup' => t("You can manage the breakpoints of this group here."),
+    );
+    $info = array();
+    $info[] = t("You can change the order of the breakpoints inside this group.");
+    $info[] = t("You can enable multipliers for each breakpoint, but this will also affect other groups.");
+
+    $form['more_info'] = array(
+      '#type' => 'container',
+      '#theme' => 'item_list',
+      '#items' => $info,
+    );
+  }
+
   $form['breakpoints'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
@@ -37,7 +75,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
 
   $breakpoints = array();
   $breakpoint_group = breakpoints_breakpoint_group_load($breakpoint_group_name);
-  if ($breakpoint_group_name == '') {
+  if ($global) {
     $breakpoints = breakpoints_breakpoint_load_all();
   }
   else {
@@ -64,9 +102,8 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
       'breakpoint' => array(
         '#type' => 'textfield',
         '#default_value' => $breakpoint->breakpoint,
-        '#disabled' => $breakpoint->source === 'theme',
+        '#disabled' => $breakpoint->source_type === 'theme' || !$global,
         '#size' => empty($multipliers) ? 60 : 30,
-        '#disabled' => $breakpoint->source_type == 'theme',
       ),
       'weight' => array(
         '#type' => 'textfield',
@@ -85,32 +122,44 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
     }
   }
 
-  // Add empty row
-  $form['breakpoints']['new'] = array(
-    'name' => array(
-      '#type' => 'textfield',
-      '#default_value' => '',
-      '#size' => 20,
-    ),
-    'breakpoint' => array(
-      '#type' => 'textfield',
-      '#default_value' => '',
-      '#size' => empty($multipliers) ? 60 : 30,
-    ),
-    'weight' => array(
-      '#type' => 'textfield',
-      '#size' => 4,
-      '#default_value' => 0,
-      '#attributes' => array('class' => array('breakpoints-weight')),
-    ),
-  );
-  // Add multipliers checkboxes if needed.
-  if (!empty($multipliers)) {
-    $form['breakpoints']['new']['multipliers'] = array(
-      '#type' => 'checkboxes',
-      '#default_value' => array(),
-      '#options' => $multipliers,
+  if ($global) {
+    // Add empty row
+    $form['breakpoints']['new'] = array(
+      'name' => array(
+        '#type' => 'textfield',
+        '#default_value' => '',
+        '#size' => 20,
+      ),
+      'machine_name' => array(
+        '#type' => 'machine_name',
+        '#size' => '64',
+        '#title' => t('Machine name'),
+        '#default_value' => '',
+        '#machine_name' => array(
+          'exists' => 'breakpoints_breakpoint_name_exists',
+          'source' => array('breakpoints', 'new', 'name'),
+        ),
+      ),
+      'breakpoint' => array(
+        '#type' => 'textfield',
+        '#default_value' => '',
+        '#size' => empty($multipliers) ? 60 : 30,
+      ),
+      'weight' => array(
+        '#type' => 'textfield',
+        '#size' => 4,
+        '#default_value' => 0,
+        '#attributes' => array('class' => array('breakpoints-weight')),
+      ),
     );
+    // Add multipliers checkboxes if needed.
+    if (!empty($multipliers)) {
+      $form['breakpoints']['new']['multipliers'] = array(
+        '#type' => 'checkboxes',
+        '#default_value' => array(),
+        '#options' => $multipliers,
+      );
+    }
   }
 
   // Buttons
@@ -124,7 +173,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
     '#value' => t('Save'),
   );
 
-  if ($breakpoint_group_name != '') {
+  if (!$global) {
     $form['buttons']['editlink'] = array(
       '#type' => 'markup',
       '#markup' => l(t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit', array(
@@ -159,29 +208,28 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
   foreach (element_children($form) as $key) {
     $form[$key]['weight']['#attributes']['class'] = array('breakpoints-weight');
     $row = array();
-    $row[] = drupal_render($form[$key]['name']);
+    if ($key != 'new') {
+      $row[] = drupal_render($form[$key]['name']);
+    }
+    else {
+      $row[] = drupal_render($form[$key]['name']) . ' ' .drupal_render($form[$key]['machine_name']);
+    }
     $row[] = drupal_render($form[$key]['breakpoint']);
     $row[] = drupal_render($form[$key]['multipliers']);
     if ($key != 'new') {
       $breakpoint = $form[$key]['#breakpoint_data'];
       $row[] = $breakpoint->source . ' (' . $breakpoint->source_type . ')';
       $row[] = $breakpoint->status ? t('Enabled') : t('Disabled');
-      if (!empty($form['#group_name'])) {
-        $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/breakpoints/groups/' . $form['#group_name'] . '/' . ($breakpoint->status ? 'disable' : 'enable') . '/' . $key, $link_attributes);
-      }
-      else {
+      if (empty($form['#group_name'])) {
         $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/breakpoints/' . ($breakpoint->status ? 'disable' : 'enable') . '/' . $key, $link_attributes);
       }
-      if ($breakpoint->source == 'user') {
-        if (!empty($form['#group_name'])) {
-          $row[] = l(t('Delete'), 'admin/config/media/breakpoints/groups/' . $form['#group_name'] . '/delete/' . $key, $link_attributes);
-        }
-        else {
+      if (empty($form['#group_name'])) {
+        if ($breakpoint->source == 'user') {
           $row[] = l(t('Delete'), 'admin/config/media/breakpoints/delete/' . $key, $link_attributes);
         }
-      }
-      else {
-        $row[] = '';
+        else {
+          $row[] = '';
+        }
       }
       $class= 'resp-img-status-' . ($breakpoint->status ? 'enabled' : 'disabled');
     }
@@ -199,15 +247,27 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
     );
   }
 
-  $header =  array(
-    t('Name'),
-    t('Breakpoint, @media ...'),
-    t('Multipliers'),
-    t('Source'),
-    t('Status'),
-    array('data' => t('Operations'), 'colspan' => 2),
-    t('Weight'),
-  );
+  if (empty($form['#group_name'])) {
+    $header =  array(
+      t('Name'),
+      t('Breakpoint, @media ...'),
+      t('Multipliers'),
+      t('Source'),
+      t('Status'),
+      array('data' => t('Operations'), 'colspan' => 2),
+      t('Weight'),
+    );
+  }
+  else {
+    $header =  array(
+      t('Name'),
+      t('Breakpoint, @media ...'),
+      t('Multipliers'),
+      t('Source'),
+      t('Status'),
+      t('Weight'),
+    );
+  }
 
   $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-breakpoints')));
   drupal_add_tabledrag('resp-img-breakpoints', 'order', 'sibling', 'breakpoints-weight');
@@ -222,14 +282,17 @@ function breakpoints_admin_breakpoints_validate($form, &$form_state) {
   if (strpos($form_state['triggering_element']['#id'], 'remove') === FALSE) {
     $breakpoints = $form_state['values']['breakpoints'];
     if (!empty($breakpoints)) {
-      $unique = array();
       foreach ($breakpoints as $key => $breakpointdata) {
         if (!empty($breakpointdata['name'])) {
           // Breakpoint is required.
+          if ($key == 'new') {
+            if (empty($breakpointdata['machine_name'])) {
+              form_set_error('breakpoints][' . $key . '][machine_name', 'Required');
+            }
+          }
           if (empty($breakpointdata['breakpoint']) && $breakpointdata['breakpoint'] !== '0') {
             form_set_error('breakpoints][' . $key . '][breakpoint', 'Required');
           }
-          $unique[$breakpointdata['name']] = TRUE;
         }
       }
     }
@@ -252,7 +315,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
     foreach ($breakpoints as $breakpointname => $breakpointdata) {
       if (!empty($breakpointdata['name'])) {
         $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpointname);
-        if ($breakpoint) {
+        if ($breakpoint && $breakpointname != 'new') {
           // only save the weight when on the global screen.
           if ($global_group) {
             $breakpoint->weight = $breakpointdata['weight'];
@@ -272,6 +335,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
           $breakpoint->weight = $breakpointdata['weight'];
           $breakpoint->status = TRUE;
           $breakpoint->multipliers = $breakpointdata['multipliers'];
+          $breakpoint->machine_name = 'custom.user.' . $breakpointdata['machine_name'];
           breakpoints_breakpoint_save($breakpoint);
           $saved_breakpoints[] = breakpoints_breakpoint_config_name($breakpoint);
         }
@@ -397,6 +461,10 @@ function breakpoints_add_style_form_submit($form, &$form_state) {
 function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $machine_name = '') {
   $form = array();
   $group = breakpoints_breakpoint_group_load($machine_name);
+  $breakpoints = breakpoints_breakpoint_load_all();
+  if (empty($breakpoints)) {
+    return breakpoints_admin_breakpoint_group_edit_form_no_breakpoints();
+  }
 
   $form_state['#breakpoint_group'] = $group;
   $is_new = $machine_name == '';
@@ -423,7 +491,6 @@ function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $mach
     ),
   );
 
-  $breakpoints = breakpoints_breakpoint_load_all();
   foreach ($breakpoints as $breakpoint_name => $breakpoint) {
     $options[$breakpoint_name] = $breakpoint->name . ' [' . $breakpoint->breakpoint . ']';
   }
@@ -455,6 +522,17 @@ function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $mach
       )),
     );
   }
+
+  return $form;
+}
+
+function breakpoints_admin_breakpoint_group_edit_form_no_breakpoints() {
+  $form = array();
+
+  $form['info'] = array(
+    '#type' => 'markup',
+    '#markup' => t("There're no breakpoints defined, you'll have to create them first."),
+  );
 
   return $form;
 }
