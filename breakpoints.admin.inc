@@ -41,9 +41,12 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
     $breakpoints = breakpoints_breakpoint_load_all();
   }
   else {
+    $weight = 0;
     foreach ($breakpoint_group->breakpoints as $breakpoint_name) {
       $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint_name);
       if ($breakpoint && isset($breakpoint->machine_name)) {
+        $breakpoint->global_weight = $breakpoint->weight;
+        $breakpoint->weight = $weight++;
         $breakpoints[$breakpoint_name] = $breakpoint;
       }
     }
@@ -238,14 +241,23 @@ function breakpoints_admin_breakpoints_validate($form, &$form_state) {
  */
 function breakpoints_admin_breakpoints_submit($form, &$form_state) {
   $breakpoints = $form_state['values']['breakpoints'];
+  $group_name = $form_state['group_name'];
+  $global_group = $group_name == '';
+  if (!$global_group) {
+    // sort by weight, needed to store the right order in a group
+    uasort($breakpoints, '_breakpoints_sort_by_weight_array');
+  }
   $saved_breakpoints = array();
   if (!empty($breakpoints)) {
     foreach ($breakpoints as $breakpointname => $breakpointdata) {
       if (!empty($breakpointdata['name'])) {
         $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpointname);
         if ($breakpoint) {
+          // only save the weight when on the global screen.
+          if ($global_group) {
+            $breakpoint->weight = $breakpointdata['weight'];
+          }
           $breakpoint->breakpoint = $breakpointdata['breakpoint'];
-          $breakpoint->weight = $breakpointdata['weight'];
           $breakpoint->multipliers = $breakpointdata['multipliers'];
           breakpoints_breakpoint_save($breakpoint);
           $saved_breakpoints[] = $breakpointname;
@@ -265,8 +277,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
         }
       }
     }
-    $group_name = $form_state['group_name'];
-    if ($group_name != '') {
+    if (!$global_group) {
       $group = breakpoints_breakpoint_group_load($group_name);
       if ($group) {
         $group->breakpoints = $saved_breakpoints;

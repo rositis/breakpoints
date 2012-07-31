@@ -116,7 +116,6 @@ function breakpoints_menu() {
     'page arguments' => array('breakpoints_admin_breakpoints'),
     'access arguments' => array('administer breakpoints'),
     'file' => 'breakpoints.admin.inc',
-    'weight' => 10,
   );
 
   $items['admin/config/media/breakpoints/create_style'] = array(
@@ -225,6 +224,13 @@ function _breakpoints_sort_by_weight($a, $b) {
     return ($a->weight < $b->weight) ? -1 : 1;
   }
   return 0;
+}
+
+/**
+ * Sort breakpoints by weight.
+ */
+function _breakpoints_sort_by_weight_array($a, $b) {
+  return _breakpoints_sort_by_weight((object)$a, (object)$b);
 }
 
 /**
