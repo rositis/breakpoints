@@ -580,7 +580,7 @@ function breakpoints_admin_breakpoint_group_delete_form($form, &$form_state, $ma
   $question = t('Are you sure you want to delete %group', array(
     '%group' => $group->name,
   ));
-  $path = 'admin/config/media/breakpoints/groups/' . $machine_name;
+  $path = 'admin/config/media/breakpoints/groups';
   return confirm_form($form, $question, $path, '');
 }
 
