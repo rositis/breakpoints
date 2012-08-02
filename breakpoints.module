@@ -482,7 +482,9 @@ function breakpoints_breakpoint_group_load($name) {
   $result = db_query($sql, array(':name' => $name));
   if ($result) {
     $data = $result->fetchObject();
-    $data->breakpoints = unserialize($data->breakpoints);
+    if (isset($data->breakpoints)) {
+      $data->breakpoints = unserialize($data->breakpoints);
+    };
     return $data;
   }
   else {
