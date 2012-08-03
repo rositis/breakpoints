@@ -78,7 +78,7 @@ function breakpoints_schema() {
       'key' => 'machine_name',
       'key name' => 'machine_name',
       'primary key' => 'id',
-      'identifier' => 'breakpoints',
+      'identifier' => 'breakpoint',
       'admin_title' => 'label',
       'default hook' => 'default_breakpoints',
       'api' => array(

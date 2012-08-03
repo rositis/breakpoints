@@ -212,7 +212,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
       $row[] = drupal_render($form[$key]['name']);
     }
     else {
-      $row[] = drupal_render($form[$key]['name']) . ' ' .drupal_render($form[$key]['machine_name']);
+      $row[] = drupal_render($form[$key]['name']) . ' ' . drupal_render($form[$key]['machine_name']);
     }
     $row[] = drupal_render($form[$key]['breakpoint']);
     $row[] = drupal_render($form[$key]['multipliers']);
@@ -230,10 +230,12 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
         else {
           $row[] = '';
         }
+        $row[] = l(t('Export'), 'admin/config/media/breakpoints/export/' . $key, $link_attributes);
       }
-      $class= 'resp-img-status-' . ($breakpoint->status ? 'enabled' : 'disabled');
+      $class = 'resp-img-status-' . ($breakpoint->status ? 'enabled' : 'disabled');
     }
     else {
+      $row[] = '';
       $row[] = '';
       $row[] = '';
       $row[] = '';
@@ -248,18 +250,18 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
   }
 
   if (empty($form['#group_name'])) {
-    $header =  array(
+    $header = array(
       t('Name'),
       t('Breakpoint, @media ...'),
       t('Multipliers'),
       t('Source'),
       t('Status'),
-      array('data' => t('Operations'), 'colspan' => 2),
+      array('data' => t('Operations'), 'colspan' => 3),
       t('Weight'),
     );
   }
   else {
-    $header =  array(
+    $header = array(
       t('Name'),
       t('Breakpoint, @media ...'),
       t('Multipliers'),
@@ -354,20 +356,30 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
  * Admin action form: enable, disable, delete
  */
 function breakpoints_admin_breakpoint_actions_form($form, &$form_state, $group_name, $action, $breakpoint) {
-  $form_state['group_name'] = $group_name;
-  $form_state['action'] = $action;
-  $form_state['breakpoint'] = $breakpoint;
-  $question = t('Are you sure you want to %action %breakpoint', array(
-    '%action' => $action,
-    '%breakpoint' => $breakpoint,
-  ));
-  if (!empty($group_name)) {
-    $path = 'admin/config/media/breakpoints/groups/' . $group_name;
+  switch ($action) {
+    case 'enable':
+    case 'disable':
+    case 'delete':
+      $form_state['group_name'] = $group_name;
+      $form_state['action'] = $action;
+      $form_state['breakpoint'] = $breakpoint;
+      $question = t('Are you sure you want to %action %breakpoint', array(
+            '%action' => $action,
+            '%breakpoint' => $breakpoint,
+          ));
+      if (!empty($group_name)) {
+        $path = 'admin/config/media/breakpoints/groups/' . $group_name;
+      }
+      else {
+        $path = 'admin/config/media/breakpoints';
+      }
+      $form = confirm_form($form, $question, $path, '');
+      break;
+    case 'export':
+      $form = drupal_get_form('breakpoints_admin_breakpoint_export_form', $breakpoint);
+      break;
   }
-  else {
-    $path = 'admin/config/media/breakpoints';
-  }
-  return confirm_form($form, $question, $path, '');
+  return $form;
 }
 
 /**
@@ -577,8 +589,8 @@ function breakpoints_admin_breakpoint_group_delete_form($form, &$form_state, $ma
   $group = breakpoints_breakpoint_group_load($machine_name);
   $form_state['machine_name'] = $machine_name;
   $question = t('Are you sure you want to delete %group', array(
-    '%group' => $group->name,
-  ));
+        '%group' => $group->name,
+      ));
   $path = 'admin/config/media/breakpoints/groups';
   return confirm_form($form, $question, $path, '');
 }
@@ -597,10 +609,10 @@ function breakpoints_admin_breakpoint_group_delete_form_submit($form, &$form_sta
  * Export a group.
  */
 function breakpoints_admin_breakpoint_group_export_form($form, &$form_state, $machine_name) {
-   // Get export code with Ctools.
+  // Get export code with Ctools.
   $group = breakpoints_breakpoint_group_load($machine_name);
   $export = ctools_export_object('breakpoint_group', $group);
-  
+
   // Create the export code textarea.
   ctools_include('export');
   $form['export'] = array(
@@ -612,6 +624,9 @@ function breakpoints_admin_breakpoint_group_export_form($form, &$form_state, $ma
   return $form;
 }
 
+/**
+ * Import a breakpoint group.
+ */
 function breakpoints_admin_breakpoint_group_import_form($form, &$form_state) {
   $form['import'] = array(
     '#type' => 'textarea',
@@ -625,8 +640,8 @@ function breakpoints_admin_breakpoint_group_import_form($form, &$form_state) {
 }
 
 /**
-* Validate a preset import.
-*/
+ * Validate a breakpoint group import.
+ */
 function breakpoints_admin_breakpoint_group_import_form_validate($form, &$form_state) {
   ctools_include('export');
   $code = $form_state['values']['import'];
@@ -646,7 +661,9 @@ function breakpoints_admin_breakpoint_group_import_form_validate($form, &$form_s
   }
 }
 
-
+/**
+ * Import breakpoint group.
+ */
 function breakpoints_admin_breakpoint_group_import_form_submit($form, &$form_state) {
   $group = $form_state['values']['import'];
   if (breakpoints_breakpoint_group_save($group)) {
@@ -655,5 +672,71 @@ function breakpoints_admin_breakpoint_group_import_form_submit($form, &$form_sta
   }
   else {
     drupal_set_message(t('Something went wrong, we could not save the group', 'error'));
+  }
+}
+
+/**
+ * Export a breakpoint.
+ */
+function breakpoints_admin_breakpoint_export_form($form, $form_state, $fullkey) {
+  $breakpoint = breakpoints_breakpoint_load_by_fullkey($fullkey);
+  $export = ctools_export_object('breakpoints', $breakpoint);
+  // Create the export code textarea.
+  ctools_include('export');
+  $form['export'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Preset code'),
+    '#rows' => 20,
+    '#default_value' => $export,
+  );
+  return $form;
+}
+
+/**
+ * Import breakpoint.
+ */
+function breakpoints_admin_breakpoint_import_form($form, $form_state) {
+  $form['import'] = array(
+    '#type' => 'textarea',
+    '#rows' => 10,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import')
+  );
+  return $form;
+}
+
+/**
+ * Validate a breakpoint import.
+ */
+function breakpoints_admin_breakpoint_import_form_validate($form, &$form_state) {
+  ctools_include('export');
+  $code = $form_state['values']['import'];
+  $breakpoint = ctools_export_crud_import('breakpoints', $code);
+  if (!breakpoints_breakpoint_validate($breakpoint)) {
+    form_set_error('import', t('Not a valid breakpoint object'));
+  }
+  else {
+    if (breakpoints_breakpoint_machine_name_exists($breakpoint->machine_name)) {
+      form_set_error('import', t('A breakpoint with machine name %name already exists', array('%name' => $breakpoint->machine_name)));
+    }
+    else {
+      form_set_value($form['import'], $breakpoint, $form_state);
+    }
+  }
+}
+
+/**
+ * Import breakpoint.
+ */
+function breakpoints_admin_breakpoint_import_form_submit($form, &$form_state) {
+  $breakpoint = $form_state['values']['import'];
+  if (breakpoints_breakpoint_save($breakpoint)) {
+    drupal_set_message(t('Breakpoint %breakpoint saved.', array('%breakpoint' => $breakpoint->name)));
+    $form_state['redirect'] = 'admin/config/media/breakpoints/';
+  }
+  else {
+    drupal_set_message(t('Something went wrong, we could not save the breakpoint'), 'error');
   }
 }
