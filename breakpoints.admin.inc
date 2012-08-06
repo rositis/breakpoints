@@ -120,6 +120,11 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
         '#options' => $multipliers,
       );
     }
+    // Add global weight if needed.
+    $form['breakpoints'][$key]['global_weight'] = array(
+      '#type' => 'value',
+      '#value' => isset($breakpoint->global_weight) ? $breakpoint->global_weight : $breakpoint->weight,
+    );
   }
 
   if ($global) {
@@ -241,7 +246,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
         $row[] = l($breakpoint->status ? t('Disable') : t('Enable'), 'admin/config/media/breakpoints/' . ($breakpoint->status ? 'disable' : 'enable') . '/' . $key, $link_attributes);
       }
       if (empty($form['#group_name'])) {
-        if ($breakpoint->source == 'user') {
+        if ($breakpoint->source_type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
           $row[] = l(t('Delete'), 'admin/config/media/breakpoints/delete/' . $key, $link_attributes);
         }
         else {
@@ -289,7 +294,6 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
   }
   $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-breakpoints')));
   drupal_add_tabledrag('resp-img-breakpoints', 'order', 'sibling', 'breakpoints-weight');
-
   return $output;
 }
 
@@ -339,6 +343,9 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
           if ($global_group) {
             $breakpoint->weight = $breakpointdata['weight'];
           }
+          else {
+            $breakpoint->weight = $breakpointdata['global_weight'];
+          }
           $breakpoint->breakpoint = $breakpointdata['breakpoint'];
           $breakpoint->multipliers = $breakpointdata['multipliers'];
           breakpoints_breakpoint_save($breakpoint);
@@ -367,7 +374,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
       }
     }
   }
-  if($form_state['clicked_button']['#value'] == $form_state['values']['override']) {
+  if(isset($form_state['values']['override']) && $form_state['clicked_button']['#value'] == $form_state['values']['override']) {
     breakpoints_admin_breakpoints_theme_override($group);
   }
 }
