@@ -609,15 +609,23 @@ function breakpoints_admin_breakpoint_group_delete_form_submit($form, &$form_sta
  * Export a group.
  */
 function breakpoints_admin_breakpoint_group_export_form($form, &$form_state, $machine_name) {
-  // Get export code with Ctools.
-  $group = breakpoints_breakpoint_group_load($machine_name);
-  $export = ctools_export_object('breakpoint_group', $group);
-
   // Create the export code textarea.
   ctools_include('export');
+  $export = "/**\n * Breakpoints.\n */\n" . '$breakpoints = array();' . "\n";
+  $group = breakpoints_breakpoint_group_load($machine_name);
+  foreach ($group->breakpoints as $breakpoint) {
+    if (!is_array($breakpoint) && !is_object($breakpoint)) {
+      $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+    }
+    $export .= ctools_export_object('breakpoints', $breakpoint) . "\n";
+    $export .= '$breakpoints[] = $breakpoint;' . "\n\n";
+  }
+  $export .= "/**\n * Breakpoint group.\n */\n";
+  $export .= ctools_export_object('breakpoint_group', $group);
+
   $form['export'] = array(
     '#type' => 'textarea',
-    '#title' => t('Preset code'),
+    '#title' => t('Breakpoint group code'),
     '#rows' => 20,
     '#default_value' => $export,
   );
@@ -648,17 +656,24 @@ function breakpoints_admin_breakpoint_group_import_form_validate($form, &$form_s
   $group = ctools_export_crud_import('breakpoint_group', $code);
   if (!breakpoints_breakpoint_group_validate($group)) {
     form_set_error('import', t('Not a valid group object'));
+    return;
   }
-  else {
-    if (breakpoints_breakpoint_group_name_exists($group->machine_name)) {
-      form_set_error('import', t('A group with machine name %name already exists', array('%name' => $group->machine_name)));
-    }
-    else {
-      // Manually imported groups are the same as custom made groups.
-      $group->type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
-      form_set_value($form['import'], $group, $form_state);
+  if (breakpoints_breakpoint_group_name_exists($group->machine_name)) {
+    form_set_error('import', t('A group with machine name %name already exists', array('%name' => $group->machine_name)));
+    return;
+  }
+  foreach ($group->breakpoints as $key => $breakpoint) {
+    // check if the breakpoint is a fully loaded object.
+    if (is_array($breakpoint) || is_object($breakpoint)) {
+      if (!breakpoints_breakpoint_validate($breakpoint)) {
+        form_set_error('import',  t('The breakpoint group contains an invalid breakpoint.'));
+        return;
+      }
     }
   }
+  // Manually imported groups are the same as custom made groups.
+  $group->type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
+  form_set_value($form['import'], $group, $form_state);
 }
 
 /**
@@ -666,6 +681,24 @@ function breakpoints_admin_breakpoint_group_import_form_validate($form, &$form_s
  */
 function breakpoints_admin_breakpoint_group_import_form_submit($form, &$form_state) {
   $group = $form_state['values']['import'];
+
+  foreach ($group->breakpoints as $key => $breakpoint) {
+    // check if the breakpoint is a fully loaded object.
+    if (is_array($breakpoint) || is_object($breakpoint)) {
+      $breakpoint = (object)$breakpoint;
+      // If the breakpoints exist, only overwrite the custom ones.
+      if ($existing_breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint->machine_name)) {
+        if ($breakpoint->source_type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
+          $breakpoint = (object)array_merge((array)$existing_breakpoint, (array)$breakpoint);
+          breakpoints_breakpoint_save($breakpoint);
+        }
+      }
+      else {
+        breakpoints_breakpoint_save($breakpoint);
+      }
+      $group->breakpoints[$key] = $breakpoint->machine_name;
+    }
+  }
   if (breakpoints_breakpoint_group_save($group)) {
     drupal_set_message(t('Group %group saved.', array('%group' => $group->name)));
     $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $group->machine_name;
@@ -679,10 +712,11 @@ function breakpoints_admin_breakpoint_group_import_form_submit($form, &$form_sta
  * Export a breakpoint.
  */
 function breakpoints_admin_breakpoint_export_form($form, $form_state, $fullkey) {
-  $breakpoint = breakpoints_breakpoint_load_by_fullkey($fullkey);
-  $export = ctools_export_object('breakpoints', $breakpoint);
   // Create the export code textarea.
   ctools_include('export');
+  $breakpoint = breakpoints_breakpoint_load_by_fullkey($fullkey);
+  $export = ctools_export_object('breakpoints', $breakpoint);
+
   $form['export'] = array(
     '#type' => 'textarea',
     '#title' => t('Preset code'),

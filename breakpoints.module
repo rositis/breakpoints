@@ -624,3 +624,12 @@ function breakpoints_theme() {
     ),
   );
 }
+
+/**
+ * Export callback.
+ * @see breakpoints_schema().
+ */
+function breakpoint_group_export_breakpoints($object, $field, $value, $indent) {
+  $export = '$breakpoints';
+  return $export;
+}

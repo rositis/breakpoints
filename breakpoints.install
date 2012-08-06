@@ -114,6 +114,8 @@ function breakpoints_schema() {
         'type' => 'blob',
         'description' => 'breakpoints',
         'not null' => TRUE,
+        // we do not export the serialized string saved in this column, we export the fully loaded objects.
+        'export callback' => 'breakpoint_group_export_breakpoints',
       ),
       'type' => array(
         'type' => 'varchar',
