@@ -183,16 +183,24 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
     }
     $form['buttons']['editlink'] = array(
       '#type' => 'markup',
-      '#markup' => l(t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit', array(
-        'query' => drupal_get_destination(),
-      )),
+      '#markup' => l(
+        t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit',
+        array(
+          'query' => drupal_get_destination(),
+          'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-edit-link')),
+        )
+      ),
     );
     if ($breakpoint_group->type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
       $form['buttons']['deletelink'] = array(
         '#type' => 'markup',
-        '#markup' => l(t('Delete this group'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/delete', array(
-          'query' => array('destination' => 'admin/config/media/breakpoints/groups'),
-        )),
+        '#markup' => l(
+          t('Delete this group'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/delete',
+          array(
+            'query' => array('destination' => 'admin/config/media/breakpoints/groups'),
+            'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-delete-link')),
+          )
+        ),
       );
     }
   }
@@ -217,9 +225,11 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
     $row = array();
     if ($key != 'new') {
       $row[] = drupal_render($form[$key]['name']);
+      $row[] = '';
     }
     else {
-      $row[] = drupal_render($form[$key]['name']) . ' ' . drupal_render($form[$key]['machine_name']);
+      $row[] = drupal_render($form[$key]['name']);
+      $row[] = drupal_render($form[$key]['machine_name']);
     }
     $row[] = drupal_render($form[$key]['breakpoint']);
     $row[] = drupal_render($form[$key]['multipliers']);
@@ -239,7 +249,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
         }
         $row[] = l(t('Export'), 'admin/config/media/breakpoints/export/' . $key, $link_attributes);
       }
-      $class = 'resp-img-status-' . ($breakpoint->status ? 'enabled' : 'disabled');
+      $class = 'breakpoints-status-' . ($breakpoint->status ? 'enabled' : 'disabled');
     }
     else {
       $row[] = '';
@@ -247,7 +257,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
       $row[] = '';
       $row[] = '';
       $row[] = '';
-      $class = 'resp-img-status-new';
+      $class = 'breakpoints-status-new';
     }
     $row[] = drupal_render($form[$key]['weight']);
     $rows[] = array(
@@ -258,7 +268,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
 
   if (empty($form['#group_name'])) {
     $header = array(
-      t('Name'),
+      array('data' => t('Name'), 'colspan' => 2),
       t('Breakpoint, @media ...'),
       t('Multipliers'),
       t('Source'),
@@ -269,7 +279,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
   }
   else {
     $header = array(
-      t('Name'),
+      array('data' => t('Name'), 'colspan' => 2),
       t('Breakpoint, @media ...'),
       t('Multipliers'),
       t('Source'),
@@ -277,7 +287,6 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
       t('Weight'),
     );
   }
-
   $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-breakpoints')));
   drupal_add_tabledrag('resp-img-breakpoints', 'order', 'sibling', 'breakpoints-weight');
 
