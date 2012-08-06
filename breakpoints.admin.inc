@@ -139,6 +139,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
           'exists' => 'breakpoints_breakpoint_name_exists',
           'source' => array('breakpoints', 'new', 'name'),
         ),
+        '#required' => FALSE,
       ),
       'breakpoint' => array(
         '#type' => 'textfield',
@@ -174,6 +175,12 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
   );
 
   if (!$global) {
+    if ($breakpoint_group->type == BREAKPOINTS_SOURCE_TYPE_THEME) {
+      $form['buttons']['override'] = array(
+        '#type' => 'submit',
+        '#value' => t('Override theme breakpoints'),
+      );
+    }
     $form['buttons']['editlink'] = array(
       '#type' => 'markup',
       '#markup' => l(t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit', array(
@@ -289,11 +296,11 @@ function breakpoints_admin_breakpoints_validate($form, &$form_state) {
           // Breakpoint is required.
           if ($key == 'new') {
             if (empty($breakpointdata['machine_name'])) {
-              form_set_error('breakpoints][' . $key . '][machine_name', 'Required');
+              form_set_error('breakpoints][' . $key . '][machine_name', 'Machine name field is required');
             }
           }
           if (empty($breakpointdata['breakpoint']) && $breakpointdata['breakpoint'] !== '0') {
-            form_set_error('breakpoints][' . $key . '][breakpoint', 'Required');
+            form_set_error('breakpoints][' . $key . '][breakpoint', 'Breakpoint field is required');
           }
         }
       }
@@ -308,6 +315,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
   $breakpoints = $form_state['values']['breakpoints'];
   $group_name = $form_state['group_name'];
   $global_group = $group_name == '';
+  $group = breakpoints_breakpoint_group_empty_object();
   if (!$global_group) {
     // sort by weight, needed to store the right order in a group
     uasort($breakpoints, '_breakpoints_sort_by_weight_array');
@@ -350,8 +358,27 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
       }
     }
   }
+  if($form_state['clicked_button']['#value'] == $form_state['values']['override']) {
+    breakpoints_admin_breakpoints_theme_override($group);
+  }
 }
 
+/**
+ * Override the breakpoints of a group provided by a theme.
+ */
+function breakpoints_admin_breakpoints_theme_override($group) {
+  foreach ($group->breakpoints as $key => $breakpoint) {
+    $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+    if ($breakpoint->source_type == BREAKPOINTS_SOURCE_TYPE_THEME && $breakpoint->source == $group->machine_name) {
+      unset($breakpoint->id);
+      $breakpoint->machine_name = 'custom.' . $breakpoint->source . '.' . str_replace('-', '_', drupal_clean_css_identifier($breakpoint->name));
+      $breakpoint->source_type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
+      breakpoints_breakpoint_save($breakpoint);
+      $group->breakpoints[$key] = $breakpoint->machine_name;
+    }
+  }
+  breakpoints_breakpoint_group_save($group);
+}
 /**
  * Admin action form: enable, disable, delete
  */
