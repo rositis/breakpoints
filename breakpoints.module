@@ -169,6 +169,7 @@ function breakpoints_menu() {
   );
 
   $items['admin/config/media/breakpoints/%/%'] = array(
+    'title' => '',
     'page arguments' => array('breakpoints_admin_breakpoint_actions_form', '', 4, 5),
     'type' => MENU_CALLBACK,
     'access arguments' => array('administer breakpoints'),
@@ -214,6 +215,7 @@ function breakpoints_menu() {
       );
 
       $items['admin/config/media/breakpoints/groups/' . $breakpoint_group->machine_name . '/%/%'] = array(
+        'title' => '',
         'page arguments' => array('breakpoints_admin_breakpoint_actions_form', $breakpoint_group->machine_name, 6, 7),
         'type' => MENU_CALLBACK,
         'access arguments' => array('administer breakpoints'),
@@ -582,6 +584,28 @@ function breakpoints_breakpoint_group_save(&$breakpoint_group) {
     menu_rebuild();
   }
   return $result;
+}
+
+/**
+ * Export a single breakpoint group.
+ */
+function breakpoints_breakpoint_group_export($group) {
+  if (is_string($group)) {
+    $group = breakpoints_breakpoint_group_load($group);
+  }
+  $export = "/**\n * Breakpoints.\n */\n" . '$breakpoints = array();' . "\n";
+  if (isset($group->breakpoints)) {
+    foreach ($group->breakpoints as $breakpoint) {
+      if (!is_array($breakpoint) && !is_object($breakpoint)) {
+        $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+      }
+      $export .= ctools_export_object('breakpoints', $breakpoint) . "\n";
+      $export .= '$breakpoints[] = $breakpoint;' . "\n\n";
+    }
+  }
+  $export .= "/**\n * Breakpoint group.\n */\n";
+  $export .= ctools_export_object('breakpoint_group', $group);
+  return $export;
 }
 
 /**

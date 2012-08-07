@@ -654,22 +654,16 @@ function breakpoints_admin_breakpoint_group_delete_form_submit($form, &$form_sta
 function breakpoints_admin_breakpoint_group_export_form($form, &$form_state, $machine_name) {
   // Create the export code textarea.
   ctools_include('export');
-  $export = "/**\n * Breakpoints.\n */\n" . '$breakpoints = array();' . "\n";
   $group = breakpoints_breakpoint_group_load($machine_name);
-  foreach ($group->breakpoints as $breakpoint) {
-    if (!is_array($breakpoint) && !is_object($breakpoint)) {
-      $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
-    }
-    $export .= ctools_export_object('breakpoints', $breakpoint) . "\n";
-    $export .= '$breakpoints[] = $breakpoint;' . "\n\n";
+  if (!$group || !$machine_name) {
+    $group = new stdclass();
   }
-  $export .= "/**\n * Breakpoint group.\n */\n";
-  $export .= ctools_export_object('breakpoint_group', $group);
+  $export = breakpoints_breakpoint_group_export($group);
 
   $form['export'] = array(
     '#type' => 'textarea',
     '#title' => t('Breakpoint group code'),
-    '#rows' => 20,
+    '#rows' => count(explode("\n", $export)),
     '#default_value' => $export,
   );
   return $form;
@@ -758,11 +752,14 @@ function breakpoints_admin_breakpoint_export_form($form, $form_state, $fullkey) 
   // Create the export code textarea.
   ctools_include('export');
   $breakpoint = breakpoints_breakpoint_load_by_fullkey($fullkey);
+  if (!$breakpoint) {
+    $breakpoint = new stdclass();
+  }
   $export = ctools_export_object('breakpoints', $breakpoint);
 
   $form['export'] = array(
     '#type' => 'textarea',
-    '#title' => t('Preset code'),
+    '#title' => t('Breakpoint code'),
     '#rows' => 20,
     '#default_value' => $export,
   );
