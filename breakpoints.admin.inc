@@ -823,3 +823,130 @@ function breakpoints_admin_breakpoint_import_form_submit($form, &$form_state) {
     drupal_set_message(t('Something went wrong, we could not save the breakpoint'), 'error');
   }
 }
+
+/**
+ * Multipliers administration form.
+ */
+function breakpoints_multipliers_form($form, &$form_state) {
+  $settings = breakpoints_settings();
+  $multipliers = drupal_map_assoc($settings->multipliers);
+  if (isset($multipliers['1x'])) {
+    unset($multipliers['1x']);
+  }
+  $form['multipliers'] = array(
+    '#type' => 'container',
+    '#tree' => TRUE,
+    '#theme' => 'breakpoints_multipliers_table_form',
+  );
+  $form['multipliers']['1x'] = array(
+    '#markup' => '1x',
+  );
+  foreach ($multipliers as $multiplier) {
+    $form['multipliers'][$multiplier] = array(
+      '#type' => 'machine_name',
+      '#title' => '',
+      '#required' => FALSE,
+      '#default_value' => $multiplier,
+      '#description' => t('A unique machine-readable name. Can only contain lowercase letters, numbers, comma\'s, dots and underscores.'),
+      '#machine_name' => array(
+        'replace_pattern' => '[^a-z0-9_\.,]+',
+        // dummy function, appearantly required, we always return false and do
+        // our validation in the form validation function, as they can change
+        // multiple names at the same time.
+        'exists' => '_breakpoint_multipliers_exist',
+      ),
+    );
+  }
+  $form['multipliers']['new'] = array(
+    '#type' => 'machine_name',
+    '#title' => '',
+    '#required' => FALSE,
+    '#default_value' => '',
+    '#description' => t('A unique machine-readable name. Can only contain lowercase letters, numbers, comma\'s, dots and underscores.'),
+    '#machine_name' => array(
+        'replace_pattern' => '[^a-z0-9_\.,]+',
+        // dummy function, appearantly required, we always return false and do
+        // our validation in the form validation function, as they can change
+        // multiple names at the same time.
+        'exists' => '_breakpoint_multipliers_exist',
+      ),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  return $form;
+}
+
+/**
+ * Dummy function.
+ * @see breakpoints_multipliers_form().
+ */
+function _breakpoint_multipliers_exist($multiplier) {
+  return FALSE;
+}
+
+function theme_breakpoints_multipliers_table_form($element) {
+  $form = $element['form'];
+  $header = array(t('Label'), t('Operations'));
+  foreach (element_children($form) as $multiplier) {
+    $row = array();
+    $row[] = drupal_render($form[$multiplier]);
+    $row[] = in_array($multiplier, array('new', '1x')) ? '' : l(t('Delete'), 'admin/config/media/breakpoints/multipliers/' . $multiplier . '/delete');
+    $rows[] = $row;
+  }
+  return theme('table', array('header' => $header, 'rows' => $rows));
+}
+
+function breakpoints_multipliers_form_validate($form, $form_state) {
+  $multipliers = $form_state['values']['multipliers'];
+  $saved_multipliers = array(
+    '1x' => '1x',
+  );
+  foreach ($multipliers as $form_key => $multiplier) {
+    if ($multiplier == '' && $form_key != 'new') {
+      form_set_error('multipliers][' . $form_key, t('Label is required.'));
+    }
+    if ($multiplier != '') {
+      if (isset($saved_multipliers[$multiplier])) {
+        form_set_error('multipliers][' . $form_key, t('Label must be unique.'));
+      }
+      $saved_multipliers[$multiplier] = $multiplier;
+    }
+  }
+}
+
+function breakpoints_multipliers_form_submit($form, &$form_state) {
+  $multipliers = array_values(array_filter($form_state['values']['multipliers']));
+  array_unshift($multipliers, '1x');
+  breakpoints_settings_save($multipliers);
+  drupal_set_message('Multiplier settings saved.');
+}
+
+function breakpoints_admin_multiplier_delete_form($form, &$form_state, $multiplier) {
+  $path = 'admin/config/media/breakpoints/multipliers';
+  if ($multiplier == '1x') {
+    $form['multiplier'] = array(
+      '#markup' => t('Multiplier %multiplier can not be deleted! !link', array('%multiplier' => $multiplier, '!link' => l(t('Back to overview page.'), $path)))
+    );
+    return $form;
+  }
+  $form['multiplier'] = array(
+    '#type' => 'value',
+    '#value' => $multiplier,
+  );
+  return confirm_form($form, t('Are you sure you want to delete multiplier %multiplier', array('%multiplier' => $multiplier)), $path);
+}
+
+function breakpoints_admin_multiplier_delete_form_submit($form, &$form_state) {
+  $settings = breakpoints_settings();
+  $multiplier = $form_state['values']['multiplier'];
+  $multipliers = drupal_map_assoc($settings->multipliers);
+  if (isset($multipliers[$multiplier])) {
+    unset($multipliers[$multiplier]);
+  }
+  breakpoints_settings_save(array_values($multipliers));
+  drupal_set_message(t('Multiplier %multiplier was deleted', array('%multiplier' => $multiplier)));
+  $form_state['redirect'] = 'admin/config/media/breakpoints/multipliers';
+}

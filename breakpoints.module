@@ -129,6 +129,27 @@ function breakpoints_menu() {
     'weight' => 30,
   );
 
+  $items['admin/config/media/breakpoints/multipliers'] = array(
+    'title' => 'Multipliers',
+    'description' => 'Manage multipliers',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('breakpoints_multipliers_form'),
+    'access arguments' => array('administer breakpoints'),
+    'file' => 'breakpoints.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 20,
+  );
+
+  $items['admin/config/media/breakpoints/multipliers/%/delete'] = array(
+    'title' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('breakpoints_admin_multiplier_delete_form', 5),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('administer breakpoints'),
+    'file' => 'breakpoints.admin.inc',
+    'weight' => 15,
+  );
+
   $items['admin/config/media/breakpoints/groups'] = array(
     'title' => 'Groups',
     'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -646,6 +667,10 @@ function breakpoints_theme() {
       'render element' => 'form',
       'theme_key' => NULL,
     ),
+    'breakpoints_multipliers_table_form' => array(
+      'render element' => 'form',
+      'theme_key' => NULL,
+    )
   );
 }
 
