@@ -124,6 +124,12 @@ function breakpoints_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'overridden' => array(
+        'type' => 'int',
+        'description' => 'Boolean indicating if this group is overriden',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'primary key' => array('id'),
     'unique keys' => array(
@@ -147,4 +153,20 @@ function breakpoints_schema() {
     ),
   );
   return $schema;
+}
+
+/**
+ * Add the 'overridden' column to the breakpoint_group table.
+ */
+function breakpoints_update_7101(&$sandbox) {
+  db_add_field(
+    'breakpoint_group',
+    'overridden',
+    array(
+      'type' => 'int',
+      'description' => 'Boolean indicating if this group is overriden',
+      'not null' => TRUE,
+      'default' => 0,
+    )
+  );
 }

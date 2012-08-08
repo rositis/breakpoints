@@ -140,6 +140,17 @@ function breakpoints_menu() {
     'weight' => 20,
   );
 
+  $items['admin/config/media/breakpoints/settings'] = array(
+    'title' => 'settings',
+    'description' => 'Manage breakpoint settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('breakpoints_admin_settings_form'),
+    'access arguments' => array('administer breakpoints'),
+    'file' => 'breakpoints.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 30,
+  );
+
   $items['admin/config/media/breakpoints/multipliers/%/delete'] = array(
     'title' => '',
     'page callback' => 'drupal_get_form',

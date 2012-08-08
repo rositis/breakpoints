@@ -91,6 +91,12 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
   }
 
   foreach ($breakpoints as $key => $breakpoint) {
+    if ($breakpoint->source_type == BREAKPOINTS_SOURCE_TYPE_THEME) {
+      $bp_group = breakpoints_breakpoint_group_load($breakpoint->source);
+      if ($bp_group->overridden && variable_get('breakpoints_hide_overridden_breakpoints', 1) && $global) {
+        continue;
+      }
+    }
     $form['breakpoints'][$key] = array(
       '#breakpoint_data' => $breakpoint,
       'name' => array(
@@ -402,6 +408,7 @@ function breakpoints_admin_breakpoints_theme_override($group) {
       $group->breakpoints[$key] = $breakpoint->machine_name;
     }
   }
+  $group->overridden = 1;
   breakpoints_breakpoint_group_save($group);
 }
 /**
@@ -949,4 +956,14 @@ function breakpoints_admin_multiplier_delete_form_submit($form, &$form_state) {
   breakpoints_settings_save(array_values($multipliers));
   drupal_set_message(t('Multiplier %multiplier was deleted', array('%multiplier' => $multiplier)));
   $form_state['redirect'] = 'admin/config/media/breakpoints/multipliers';
+}
+
+function breakpoints_admin_settings_form($form, &$form_state) {
+  $form['breakpoints_hide_overridden_breakpoints'] = array(
+    '#type' => 'checkbox',
+    '#description' => t('When overriding breakpoints defined by a theme, hide them on the overview page'),
+    '#title' => t('Hide overridden breakpoints'),
+    '#default_value' => variable_get('breakpoints_hide_overridden_breakpoints', 1),
+  );
+  return system_settings_form($form);
 }
