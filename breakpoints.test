@@ -130,13 +130,13 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
     $mediaquery = '(min-width: 600px)';
     $edit = array(
       'breakpoints[new][name]' => $name,
-      'breakpoints[new][machine_name]' => strtolower($name),
+      'breakpoints[new][machine_name]' => drupal_strtolower($name),
       'breakpoints[new][breakpoint]' => $mediaquery,
     );
 
     $this->drupalPost(NULL, $edit, t('Save'));
 
-    $machine_name = BREAKPOINTS_SOURCE_TYPE_CUSTOM . '.user.' . strtolower($name);
+    $machine_name = BREAKPOINTS_SOURCE_TYPE_CUSTOM . '.user.' . drupal_strtolower($name);
     // Verify the breakpoint was saved and verify default weight of the breakpoint.
     $this->drupalGet('admin/config/media/breakpoints');
     $this->assertFieldByName("breakpoints[$machine_name][weight]", 0, t('Breakpoint weight was saved.'));
@@ -182,11 +182,11 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
     // Verify that the breakpoint is disabled.
     $this->assertLinkByHref('admin/config/media/breakpoints/enable/' . $machine_name, 0, t('Breakpoint was disabled.'));
 
-    // Attempt to create a breakpoint of the same machine name as the disabled
+    // Attempt to create a breakpoint with the same machine name as the disabled
     // breakpoint but with a different human readable name.
     $edit = array(
       'breakpoints[new][name]' => 'New Breakpoint',
-      'breakpoints[new][machine_name]' => strtolower($name),
+      'breakpoints[new][machine_name]' => drupal_strtolower($name),
       'breakpoints[new][breakpoint]' => $mediaquery,
       'breakpoints[new][multipliers][1.5x]' => 0,
       'breakpoints[new][multipliers][2x]' => 0,
@@ -335,7 +335,7 @@ class BreakpointGroupCRUDTestCase extends BreakpointGroupTestCase {
     // Add a breakpoint group with minimum data only.
     $group = new stdClass();
     $group->name = $this->randomName();
-    $group->machine_name = strtolower($group->name);
+    $group->machine_name = drupal_strtolower($group->name);
     $group->breakpoints = array();
     breakpoints_breakpoint_group_save($group);
     $this->verifyBreakpointGroup($group);
@@ -403,7 +403,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     // Add breakpoint group.
     $this->drupalGet('admin/config/media/breakpoints/groups/add');
     $name = $this->randomName();
-    $machine_name = strtolower($name);
+    $machine_name = drupal_strtolower($name);
     $breakpoint = reset($breakpoints);
     $edit = array(
       'name' => $name,

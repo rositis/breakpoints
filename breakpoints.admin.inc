@@ -257,7 +257,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
     $header[] = array('data' => t('Operations'), 'colspan' => 3);
   }
   $header[] = t('Weight');
-  
+
   $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-breakpoints')));
   drupal_add_tabledrag('resp-img-breakpoints', 'order', 'sibling', 'breakpoints-weight');
   return $output;
@@ -290,7 +290,6 @@ function _breakpoints_admin_breakpoints_table_row(&$element, $key, $global) {
   }
 
   $row[] = drupal_render($element['weight']);
-  
   return $row;
 }
 
@@ -389,7 +388,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
       }
     }
   }
-  if(isset($form_state['values']['override']) && $form_state['clicked_button']['#value'] == $form_state['values']['override']) {
+  if (isset($form_state['values']['override']) && $form_state['clicked_button']['#value'] == $form_state['values']['override']) {
     breakpoints_admin_breakpoints_theme_override($group);
   }
 }
@@ -683,7 +682,7 @@ function breakpoints_admin_breakpoint_group_export_form($form, &$form_state, $ma
   ctools_include('export');
   $group = breakpoints_breakpoint_group_load($machine_name);
   if (!$group || !$machine_name) {
-    $group = new stdclass();
+    $group = new stdClass();
   }
   $export = breakpoints_breakpoint_group_export($group);
 
@@ -780,7 +779,7 @@ function breakpoints_admin_breakpoint_export_form($form, $form_state, $fullkey) 
   ctools_include('export');
   $breakpoint = breakpoints_breakpoint_load_by_fullkey($fullkey);
   if (!$breakpoint) {
-    $breakpoint = new stdclass();
+    $breakpoint = new stdClass();
   }
   $export = ctools_export_object('breakpoints', $breakpoint);
 
@@ -899,7 +898,7 @@ function breakpoints_multipliers_form($form, &$form_state) {
 
 /**
  * Dummy function.
- * @see breakpoints_multipliers_form().
+ * @see breakpoints_multipliers_form()
  */
 function _breakpoint_multipliers_exist($multiplier) {
   return FALSE;
@@ -939,7 +938,7 @@ function breakpoints_multipliers_form_submit($form, &$form_state) {
   $multipliers = array_values(array_filter($form_state['values']['multipliers']));
   array_unshift($multipliers, '1x');
   breakpoints_settings_save($multipliers);
-  drupal_set_message('Multiplier settings saved.');
+  drupal_set_message(t('Multiplier settings are saved.'));
 }
 
 function breakpoints_admin_multiplier_delete_form($form, &$form_state, $multiplier) {
