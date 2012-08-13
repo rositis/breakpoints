@@ -609,7 +609,7 @@ function breakpoints_breakpoint_group_export($group) {
   if (is_string($group)) {
     $group = breakpoints_breakpoint_group_load($group);
   }
-  $export = "/**\n * Breakpoints.\n */\n" . '$breakpoints = array();' . "\n";
+  $export = "/**\n * Breakpoints.\n */\n" . '$breakpoints = array();' . "\n\n";
   if (isset($group->breakpoints)) {
     foreach ($group->breakpoints as $breakpoint) {
       if (!is_array($breakpoint) && !is_object($breakpoint)) {

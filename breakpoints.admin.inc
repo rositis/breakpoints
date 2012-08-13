@@ -110,6 +110,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
         '#default_value' => $breakpoint->breakpoint,
         '#disabled' => $breakpoint->source_type === 'theme' || !$global,
         '#size' => empty($multipliers) ? 60 : 30,
+        '#maxlength' => 255,
       ),
       'weight' => array(
         '#type' => 'textfield',
@@ -140,6 +141,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
         '#type' => 'textfield',
         '#default_value' => '',
         '#size' => 20,
+        '#maxlength' => 255,
       ),
       'machine_name' => array(
         '#type' => 'machine_name',
@@ -151,11 +153,13 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
           'source' => array('breakpoints', 'new', 'name'),
         ),
         '#required' => FALSE,
+        '#maxlength' => 255,
       ),
       'breakpoint' => array(
         '#type' => 'textfield',
         '#default_value' => '',
         '#size' => empty($multipliers) ? 60 : 30,
+        '#maxlength' => 255,
       ),
       'weight' => array(
         '#type' => 'textfield',
