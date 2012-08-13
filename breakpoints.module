@@ -333,18 +333,10 @@ function breakpoints_breakpoint_load_by_fullkey($machine_name = NULL) {
   if ($machine_name) {
     $breakpoints = ctools_export_load_object('breakpoints', 'names', array($machine_name));
     $breakpoint = isset($breakpoints[$machine_name]) ? $breakpoints[$machine_name] : FALSE;
-    if ($breakpoint && isset($breakpoint->multipliers) && is_string($breakpoint->multipliers)) {
-      $breakpoint->multipliers = unserialize($breakpoint->multipliers);
-    }
     return $breakpoint;
   }
   else {
     $breakpoints = ctools_export_load_object('breakpoints');
-    foreach ($breakpoints as &$breakpoint) {
-      if (isset($breakpoint->multipliers) && is_string($breakpoint->multipliers)) {
-        $breakpoint->multipliers = unserialize($breakpoint->multipliers);
-      }
-    }
     return $breakpoints;
   }
 }
@@ -448,9 +440,7 @@ function breakpoints_breakpoint_save(&$breakpoint) {
     $breakpoint->machine_name = breakpoints_breakpoint_config_name($breakpoint);
   }
   $update = (isset($breakpoint->id) && is_numeric($breakpoint->id)) ? array('id') : array();
-  $breakpoint->multipliers = serialize($breakpoint->multipliers);
   $result = drupal_write_record('breakpoints', $breakpoint, $update);
-  $breakpoint->multipliers = unserialize($breakpoint->multipliers);
   return $result;
 }
 
@@ -557,18 +547,10 @@ function breakpoints_breakpoint_group_load($name = NULL) {
   if ($name) {
     $groups = ctools_export_load_object('breakpoint_group', 'names', array($name));
     $group = isset($groups[$name]) ? $groups[$name] : FALSE;
-    if ($group && isset($group->breakpoints) && is_string($group->breakpoints)) {
-      $group->breakpoints = unserialize($group->breakpoints);
-    }
     return $group;
   }
   else {
     $groups = ctools_export_load_object('breakpoint_group');
-    foreach ($groups as &$group) {
-      if (isset($group->breakpoints) && is_string($group->breakpoints)) {
-        $group->breakpoints = unserialize($group->breakpoints);
-      }
-    }
     return $groups;
   }
 }
@@ -608,9 +590,7 @@ function breakpoints_breakpoint_validate($breakpoint) {
  */
 function breakpoints_breakpoint_group_save(&$breakpoint_group) {
   $update = (isset($breakpoint_group->id) && is_numeric($breakpoint_group->id)) ? array('id') : array();
-  $breakpoint_group->breakpoints = serialize($breakpoint_group->breakpoints);
   $result = drupal_write_record('breakpoint_group', $breakpoint_group, $update);
-  $breakpoint_group->breakpoints = unserialize($breakpoint_group->breakpoints);
   // rebuild menu if we add a new group
   if (empty ($update)) {
     menu_rebuild();
@@ -688,6 +668,7 @@ function breakpoints_theme() {
 /**
  * Export callback.
  * @see breakpoints_schema().
+ * @see breakpoints_breakpoint_group_export().
  */
 function breakpoint_group_export_breakpoints($object, $field, $value, $indent) {
   $export = '$breakpoints';
