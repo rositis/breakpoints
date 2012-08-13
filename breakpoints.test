@@ -9,7 +9,7 @@
  * Base class for Breakpoint tests.
  */
 abstract class BreakpointsTestCase extends DrupalWebTestCase {
-  function  setUp() {
+  function setUp() {
     parent::setUp('breakpoints');
   }
 
@@ -592,7 +592,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     '/**' . "\n" .
     ' * Breakpoints.' . "\n" .
     ' */' . "\n" .
-    '$breakpoints = array();' . "\n" .
+    '$breakpoints = array();' . "\n\n" .
     '$breakpoint = new stdClass();' . "\n" .
     '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */' . "\n" .
     '$breakpoint->api_version = 1;' . "\n" .
