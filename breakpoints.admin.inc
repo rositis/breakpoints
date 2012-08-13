@@ -411,6 +411,17 @@ function breakpoints_admin_breakpoints_theme_override($group) {
   $group->overridden = 1;
   breakpoints_breakpoint_group_save($group);
 }
+
+/**
+ * Page callback.
+ */
+function breakpoints_admin_breakpoint_actions_page($group_name, $action, $breakpoint) {
+  if (in_array($action, array('enable', 'disable', 'delete', 'export'))) {
+    return drupal_get_form('breakpoints_admin_breakpoint_actions_form', $group_name, $action, $breakpoint);
+  }
+  return MENU_NOT_FOUND;
+}
+
 /**
  * Admin action form: enable, disable, delete
  */

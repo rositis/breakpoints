@@ -202,7 +202,8 @@ function breakpoints_menu() {
 
   $items['admin/config/media/breakpoints/%/%'] = array(
     'title' => '',
-    'page arguments' => array('breakpoints_admin_breakpoint_actions_form', '', 4, 5),
+    'page callback' => 'breakpoints_admin_breakpoint_actions_page',
+    'page arguments' => array('', 4, 5),
     'type' => MENU_CALLBACK,
     'access arguments' => array('administer breakpoints'),
     'file' => 'breakpoints.admin.inc',
@@ -282,10 +283,10 @@ function breakpoints_settings_save($multipliers) {
 function _breakpoints_sort_by_weight($a, $b) {
   if (isset($a->weight) && isset($b->weight)) {
     if ($a->weight == $b->weight) {
-      if ($a->source_type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
+      if (isset($a->source_type) && $a->source_type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
         return -1;
       }
-      if ($b->source_type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
+      if (isset($b->source_type) && $b->source_type == BREAKPOINTS_SOURCE_TYPE_CUSTOM) {
         return 1;
       }
       return 0;
@@ -310,10 +311,10 @@ function breakpoints_breakpoint_config_name($breakpoints_breakpoint) {
     return $breakpoints_breakpoint;
   }
   else {
-    return 'breakpoints'
+    return strtolower('breakpoints'
       . '.' . $breakpoints_breakpoint->source_type
       . '.' . $breakpoints_breakpoint->source
-      . '.' . $breakpoints_breakpoint->name;
+      . '.' . $breakpoints_breakpoint->name);
   }
 }
 
@@ -441,6 +442,8 @@ function breakpoints_breakpoint_save(&$breakpoint) {
   }
   $update = (isset($breakpoint->id) && is_numeric($breakpoint->id)) ? array('id') : array();
   $result = drupal_write_record('breakpoints', $breakpoint, $update);
+  // Reset CTools cache.
+  ctools_export_load_object_reset('breakpoints');
   return $result;
 }
 
@@ -595,6 +598,8 @@ function breakpoints_breakpoint_group_save(&$breakpoint_group) {
   if (empty ($update)) {
     menu_rebuild();
   }
+  // Reset CTools cache.
+  ctools_export_load_object_reset('breakpoint_group');
   return $result;
 }
 
@@ -647,6 +652,7 @@ function breakpoints_breakpoint_group_delete_by_fullkey($key) {
   // Clear the Ctools export API cache.
   ctools_include('export');
   ctools_export_load_object_reset('breakpoint_group');
+  menu_rebuild();
 }
 
 /**
