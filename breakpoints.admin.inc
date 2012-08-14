@@ -190,7 +190,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
   );
 
   if (!$global) {
-    if ($breakpoint_group->type == BREAKPOINTS_SOURCE_TYPE_THEME) {
+    if ($breakpoint_group->type == BREAKPOINTS_SOURCE_TYPE_THEME && !$breakpoint_group->overridden) {
       $form['buttons']['override'] = array(
         '#type' => 'submit',
         '#value' => t('Override theme breakpoints'),

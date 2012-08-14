@@ -270,7 +270,12 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
  */
 abstract class BreakpointGroupTestCase extends DrupalWebTestCase {
   function  setUp() {
-    parent::setUp('breakpoints');
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    array_unshift($modules, 'breakpoints');
+    parent::setUp($modules);
   }
 
   /**
@@ -297,7 +302,7 @@ abstract class BreakpointGroupTestCase extends DrupalWebTestCase {
     // Verify breakpoints_breakpoint_group_load().
     $load_group = breakpoints_breakpoint_group_load($group->machine_name);
     foreach ($properties as $property) {
-      $this->assertEqual($load_group->{$property}, $group->{$property}, t('breakpoints_breakpoint_load_by_fullkey: Proper ' . $property . ' for breakpoint group %group.', $t_args), $assert_group);
+      $this->assertEqual($load_group->{$property}, $group->{$property}, t('breakpoints_breakpoint_group_load: Proper ' . $property . ' for breakpoint group %group.', $t_args), $assert_group);
     }
   }
 }
@@ -614,9 +619,9 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $importstring[] = '  \'1.5x\' => 0,';
     $importstring[] = '  \'2x\' => 0,';
     $importstring[] = ');';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '$breakpoints[] = $breakpoint;';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '$breakpoint = new stdClass();';
     $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
     $importstring[] = '$breakpoint->api_version = 1;';
@@ -631,9 +636,9 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $importstring[] = '  \'1.5x\' => 0,';
     $importstring[] = '  \'2x\' => 0,';
     $importstring[] = ');';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '$breakpoints[] = $breakpoint;';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '$breakpoint = new stdClass();';
     $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
     $importstring[] = '$breakpoint->api_version = 1;';
@@ -648,9 +653,9 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $importstring[] = '  \'1.5x\' => 0,';
     $importstring[] = '  \'2x\' => 0,';
     $importstring[] = ');';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '$breakpoints[] = $breakpoint;';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '$breakpoint = new stdClass();';
     $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
     $importstring[] = '$breakpoint->api_version = 1;';
@@ -665,9 +670,9 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $importstring[] = '  \'1.5x\' => 0,';
     $importstring[] = '  \'2x\' => 0,';
     $importstring[] = ');';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '$breakpoints[] = $breakpoint;';
-    $importstring[] = "\n" .
+    $importstring[] = '';
     $importstring[] = '/**';
     $importstring[] = ' * Breakpoint group.';
     $importstring[] = ' */';
@@ -702,5 +707,68 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
         $this->assertRaw(check_plain($importline));
       }
     }
+  }
+}
+
+class BreakpointsThemeTestCase extends BreakpointGroupTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Breakpoint Theme functionality',
+      'description' => 'Thoroughly test the breakpoints provided by a theme.',
+      'group' => 'Breakpoints',
+    );
+  }
+
+  public function  setUp() {
+    parent::setUp('breakpoints_theme_test');
+    theme_enable(array('breakpoints_test_theme'));
+    // Create user.
+    $this->admin_user = $this->drupalCreateUser(array(
+      'administer breakpoints',
+    ));
+
+    $this->drupalLogin($this->admin_user);
+  }
+
+  public function testThemeBreakpoints() {
+    // Verify the breakpoint group for breakpoints_test_theme was created.
+    $breakpoint_group = new stdClass();
+    $breakpoint_group->disabled = FALSE; /* Edit this to true to make a default breakpoint_group disabled initially */
+    $breakpoint_group->api_version = 1;
+    $breakpoint_group->machine_name = 'breakpoints_test_theme';
+    $breakpoint_group->name = 'Breakpoints test theme';
+    $breakpoint_group->breakpoints = array(
+      'breakpoints.theme.breakpoints_test_theme.mobile',
+      'breakpoints.theme.breakpoints_test_theme.narrow',
+      'breakpoints.theme.breakpoints_test_theme.wide',
+      'breakpoints.theme.breakpoints_test_theme.tv',
+    );
+    $breakpoint_group->type = 'theme';
+    $breakpoint_group->overridden = 0;
+    $this->verifyBreakpointGroup($breakpoint_group, FALSE);
+
+    // Override the breakpoints.
+    $this->drupalGet('admin/config/media/breakpoints/groups/' . $breakpoint_group->machine_name);
+    $this->drupalPost(NULL, array(), t('Override theme breakpoints'));
+
+    // Clear CTools cache, since drupalGet and drupalPost are different requests than the request
+    // this test is running in, the group object is still in the static cache, so we need to clear
+    // it manually.
+    ctools_export_load_object_reset('breakpoint_group');
+
+    // Verify the group is overridden
+    $breakpoint_group->breakpoints = array(
+      'custom.breakpoints_test_theme.mobile',
+      'custom.breakpoints_test_theme.narrow',
+      'custom.breakpoints_test_theme.wide',
+      'custom.breakpoints_test_theme.tv',
+    );
+    $breakpoint_group->overridden = 1;
+    $this->verifyBreakpointGroup($breakpoint_group, FALSE);
+
+    // Verify there is no override button for this group anymore.
+
+    $this->drupalGet('admin/config/media/breakpoints/groups/' . $breakpoint_group->machine_name);
+    $this->assertNoFieldById('edit-override');
   }
 }
