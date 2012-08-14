@@ -9,8 +9,13 @@
  * Base class for Breakpoint tests.
  */
 abstract class BreakpointsTestCase extends DrupalWebTestCase {
-  function setUp() {
-    parent::setUp('breakpoints');
+  function  setUp() {
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    array_unshift($modules, 'breakpoints');
+    parent::setUp($modules);
   }
 
   /**
@@ -61,7 +66,7 @@ class BreakpointsCRUDTestCase extends BreakpointsTestCase {
   function testBreakpointsCRUD() {
     // Add a breakpoint with minimum data only.
     $breakpoint = new stdClass();
-    $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+    $breakpoint->disabled = FALSE;
     $breakpoint->api_version = 1;
     $breakpoint->name = 'Custom';
     $breakpoint->breakpoint = '(min-width: 600px)';
@@ -101,6 +106,7 @@ class BreakpointsCRUDTestCase extends BreakpointsTestCase {
  * Tests for breakpoints admin interface.
  */
 class BreakpointsAdminTestCase extends BreakpointsTestCase {
+
   public static function getInfo() {
     return array(
       'name' => 'Breakpoints administration functionality',
@@ -209,7 +215,7 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
    */
   function testBreakpointExportImport() {
     $breakpoint = new stdClass();
-    $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+    $breakpoint->disabled = FALSE;
     $breakpoint->api_version = 1;
     $breakpoint->machine_name = 'custom.user.test';
     $breakpoint->name = 'test';
@@ -328,7 +334,7 @@ class BreakpointGroupCRUDTestCase extends BreakpointGroupTestCase {
     $breakpoints = array();
     for ($i = 0; $i <= 3; $i++) {
       $breakpoint = new stdClass();
-      $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+      $breakpoint->disabled = FALSE;
       $breakpoint->api_version = 1;
       $breakpoint->name = $this->randomName();
       $width = ($i + 1) * 200;
@@ -369,6 +375,7 @@ class BreakpointGroupCRUDTestCase extends BreakpointGroupTestCase {
  * Tests for breakpoint groups admin interface.
  */
 class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
+
   public static function getInfo() {
     return array(
       'name' => 'Breakpoint Group administration functionality',
@@ -396,7 +403,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $breakpoints = array();
     for ($i = 0; $i <= 3; $i++) {
       $breakpoint = new stdClass();
-      $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+      $breakpoint->disabled = FALSE;
       $breakpoint->api_version = 1;
       $breakpoint->name = $this->randomName();
       $width = ($i + 1) * 200;
@@ -521,7 +528,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
      */
     $breakpoints = array();
     $breakpoint = new stdClass();
-    $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+    $breakpoint->disabled = FALSE;
     $breakpoint->api_version = 1;
     $breakpoint->machine_name = 'custom.user.mobile';
     $breakpoint->name = 'mobile';
@@ -538,7 +545,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $breakpoints[$breakpoint->machine_name] = $breakpoint;
 
     $breakpoint = new stdClass();
-    $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+    $breakpoint->disabled = FALSE;
     $breakpoint->api_version = 1;
     $breakpoint->machine_name = 'custom.user.narrow';
     $breakpoint->name = 'narrow';
@@ -555,7 +562,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $breakpoints[$breakpoint->machine_name] = $breakpoint;
 
     $breakpoint = new stdClass();
-    $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+    $breakpoint->disabled = FALSE;
     $breakpoint->api_version = 1;
     $breakpoint->machine_name = 'custom.user.wide';
     $breakpoint->name = 'wide';
@@ -572,7 +579,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $breakpoints[$breakpoint->machine_name] = $breakpoint;
 
     $breakpoint = new stdClass();
-    $breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */
+    $breakpoint->disabled = FALSE;
     $breakpoint->api_version = 1;
     $breakpoint->machine_name = 'custom.user.tv';
     $breakpoint->name = 'tv';
@@ -756,7 +763,7 @@ class BreakpointsThemeTestCase extends BreakpointGroupTestCase {
     // it manually.
     ctools_export_load_object_reset('breakpoint_group');
 
-    // Verify the group is overridden
+    // Verify the group is overridden.
     $breakpoint_group->breakpoints = array(
       'custom.breakpoints_test_theme.mobile',
       'custom.breakpoints_test_theme.narrow',
@@ -767,8 +774,139 @@ class BreakpointsThemeTestCase extends BreakpointGroupTestCase {
     $this->verifyBreakpointGroup($breakpoint_group, FALSE);
 
     // Verify there is no override button for this group anymore.
-
     $this->drupalGet('admin/config/media/breakpoints/groups/' . $breakpoint_group->machine_name);
     $this->assertNoFieldById('edit-override');
+  }
+}
+
+class BreakpointMultipliersTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Breakpoint Multiplier functionality',
+      'description' => 'Thoroughly test the breakpoint multiplier functionality (CRUD).',
+      'group' => 'Breakpoints',
+    );
+  }
+
+  public function  setUp() {
+    parent::setUp('breakpoints', 'breakpoints_theme_test');
+    // Enable our test theme so we have breakpoints to test on.
+    theme_enable(array('breakpoints_test_theme'));
+    // Create user.
+    $this->admin_user = $this->drupalCreateUser(array(
+      'administer breakpoints',
+    ));
+
+    $this->drupalLogin($this->admin_user);
+  }
+
+  /**
+   * Test breakpoints multipliers functionality.
+   */
+  public function testBreakpointMultipliers() {
+    // Verify the default multipliers are visible.
+    $this->drupalGet('admin/config/media/breakpoints/multipliers');
+    $settings = breakpoints_settings();
+    foreach ($settings->multipliers as $multiplier) {
+      $this->assertRaw($multiplier, t('Default multiplier %multiplier found', array('%multiplier' => $multiplier)));
+      if ($multiplier != '1x') {
+        $this->assertFieldByName('multipliers[' . $multiplier . ']', $multiplier);
+      }
+    }
+
+    // Verify the '1x' multiplier can't be deleted.
+    $this->drupalGet('admin/config/media/breakpoints/multipliers/1x/delete');
+    $this->assertText(t('Multiplier 1x can not be deleted!'), t('Multiplier 1x can not be deleted'));
+    $this->assertNoFieldById('edit-submit');
+
+    // Verify we need to enter a machine readable name.
+    $this->drupalGet('admin/config/media/breakpoints/multipliers');
+    $edit = array(
+      'multipliers[new]' => '**',
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $this->assertText(t('The machine-readable name must contain only lowercase letters, numbers, and underscores.'));
+
+    // Add a multiplier.
+    $new_multiplier = drupal_strtolower($this->randomName());
+    $this->drupalGet('admin/config/media/breakpoints/multipliers');
+    $edit = array(
+      'multipliers[new]' => $new_multiplier,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+
+    // Verify the multiplier was added to the database.
+    $settings = breakpoints_settings();
+    $this->assertTrue(in_array($new_multiplier, $settings->multipliers), t('Multiplier %multiplier was added.', array('%multiplier' => $new_multiplier)));
+
+    // Verify the new multiplier is visible on the multiplier overview page.
+    $this->assertFieldByName('multipliers[' . $new_multiplier . ']', $new_multiplier);
+
+    // Update a multiplier.
+    $updated_multiplier = drupal_strtolower($this->randomName());
+    $edit = array(
+      'multipliers[' . $new_multiplier . ']' => $updated_multiplier,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+
+    // Verify the multiplier was updated in the database.
+    $settings = breakpoints_settings();
+    $this->assertFalse(in_array($new_multiplier, $settings->multipliers), t('Multiplier %multiplier was updated.', array('%multiplier' => $updated_multiplier)));
+    $this->assertTrue(in_array($updated_multiplier, $settings->multipliers), t('Multiplier %multiplier was updated.', array('%multiplier' => $updated_multiplier)));
+
+    // Verify the updated multiplier is visible on the multiplier overview page.
+    $this->assertNoFieldByName('multipliers[' . $new_multiplier . ']');
+    $this->assertFieldByName('multipliers[' . $updated_multiplier . ']', $updated_multiplier);
+    $new_multiplier = $updated_multiplier;
+
+    // Verify the default multipliers are visible on the global breakpoints page.
+    $this->drupalGet('admin/config/media/breakpoints');
+    foreach (breakpoints_breakpoint_load_all() as $breakpoint) {
+      foreach ($settings->multipliers as $multiplier) {
+        if ($multiplier != '1x') {
+          $this->assertFieldByName('breakpoints[' . $breakpoint->machine_name . '][multipliers][' . $multiplier . ']');
+        }
+        else {
+          // Multiplier 1x can not be disabled for any breakpoint.
+          $this->assertNoFieldByName('breakpoints[' . $breakpoint->machine_name . '][multipliers][' . $multiplier . ']');
+        }
+      }
+    }
+
+    // Enable a multiplier for a breakpoint and verify if it's enabled on all pages.
+    $edit = array(
+      'breakpoints[breakpoints.theme.breakpoints_test_theme.narrow][multipliers][1.5x]' => 1,
+      'breakpoints[breakpoints.theme.breakpoints_test_theme.narrow][multipliers][' . $new_multiplier . ']' => 1,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+
+    // Verify the checkbox for the enabled multipliers is checked on the global breakpoints page.
+    $this->assertFieldChecked('edit-breakpoints-breakpointsthemebreakpoints-test-themenarrow-multipliers-15x');
+    $this->assertFieldChecked('edit-breakpoints-breakpointsthemebreakpoints-test-themenarrow-multipliers-' . drupal_clean_css_identifier($new_multiplier));
+
+    // Verify the checkbox for the enabled multipliers is checked on the breakpoints page of a group.
+    $this->drupalGet('admin/config/media/breakpoints/groups/breakpoints_test_theme');
+    $this->assertFieldChecked('edit-breakpoints-breakpointsthemebreakpoints-test-themenarrow-multipliers-15x');
+    $this->assertFieldChecked('edit-breakpoints-breakpointsthemebreakpoints-test-themenarrow-multipliers-' . drupal_clean_css_identifier($new_multiplier));
+
+    // Delete a multiplier.
+    $this->drupalGet('admin/config/media/breakpoints/multipliers/' . $new_multiplier . '/delete');
+    $this->drupalPost(NULL, array(), t('Confirm'));
+    $this->assertText('Multiplier ' . $new_multiplier . ' was deleted');
+
+    // Verify the deleted multiplier is no longer visible on the multiplier overview page.
+    $this->drupalGet('admin/config/media/breakpoints/multipliers');
+    $this->assertNoFieldByName('multipliers[' . $new_multiplier . ']');
+
+    // Verify the deleted multiplier is deleted from the database.
+    $settings = breakpoints_settings();
+    $this->assertFalse(in_array($new_multiplier, $settings->multipliers), t('Multiplier %multiplier was deleted.', array('%multiplier' => $new_multiplier)));
+
+    // Verify the deleted multiplier is no longer visible on the breakpoints page.
+    $this->drupalGet('admin/config/media/breakpoints');
+    foreach (breakpoints_breakpoint_load_all() as $breakpoint) {
+      $this->assertNoFieldByName('breakpoints[' . $breakpoint->machine_name . '][multipliers][' . $new_multiplier . ']');
+    }
   }
 }
