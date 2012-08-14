@@ -224,24 +224,25 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
     );
 
     // Import a breakpoint;
-    $importstring = '$breakpoint = new stdClass();' . "\n" .
-    '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */' . "\n" .
-    '$breakpoint->api_version = 1;' . "\n" .
-    '$breakpoint->machine_name = \'custom.user.test\';' . "\n" .
-    '$breakpoint->name = \'test\';' . "\n" .
-    '$breakpoint->breakpoint = \'(min-width: 600px)\';' . "\n" .
-    '$breakpoint->source = \'user\';' . "\n" .
-    '$breakpoint->source_type = \'custom\';' . "\n" .
-    '$breakpoint->status = 1;' . "\n" .
-    '$breakpoint->weight = 0;' . "\n" .
-    '$breakpoint->multipliers = array(' . "\n" .
-    '  \'1.5x\' => 0,' . "\n" .
-    '  \'2x\' => 0,' . "\n" .
-    ');' . "\n";
+    $importstring = array();
+    $importstring[] = '$breakpoint = new stdClass();';
+    $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
+    $importstring[] = '$breakpoint->api_version = 1;';
+    $importstring[] = '$breakpoint->machine_name = \'custom.user.test\';';
+    $importstring[] = '$breakpoint->name = \'test\';';
+    $importstring[] = '$breakpoint->breakpoint = \'(min-width: 600px)\';';
+    $importstring[] = '$breakpoint->source = \'user\';';
+    $importstring[] = '$breakpoint->source_type = \'custom\';';
+    $importstring[] = '$breakpoint->status = 1;';
+    $importstring[] = '$breakpoint->weight = 0;';
+    $importstring[] = '$breakpoint->multipliers = array(';
+    $importstring[] = '  \'1.5x\' => 0,';
+    $importstring[] = '  \'2x\' => 0,';
+    $importstring[] = ');';
 
     $this->drupalGet('admin/config/media/breakpoints/groups/import-breakpoint');
     $edit = array(
-      "import" => $importstring,
+      "import" => implode("\n", $importstring),
     );
     $this->drupalPost(NULL, $edit, t('Import'));
 
@@ -254,7 +255,13 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
 
     // Verify the breakpoint exports correctly.
     $this->drupalGet('admin/config/media/breakpoints/export/' . $breakpoint->machine_name);
-    $this->assertFieldByName('export', $importstring, t('Breakpoint exported correctly.'));
+    foreach ($importstring as $importline) {
+      $importline = trim($importline);
+      if (!empty($importline)) {
+        // Text in a textarea is htmlencoded.
+        $this->assertRaw(check_plain($importline));
+      }
+    }
   }
 }
 
@@ -379,7 +386,7 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
   /**
    * Test breakpoint administration functionality
    */
-  function testBreakpointAdmin() {
+  function testBreakpointGroupAdmin() {
     // Add breakpoints.
     $breakpoints = array();
     for ($i = 0; $i <= 3; $i++) {
@@ -588,94 +595,94 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
     $breakpoint_group->type = 'custom';
     $breakpoint_group->overridden = 0;
 
-    $importstring =
-    '/**' . "\n" .
-    ' * Breakpoints.' . "\n" .
-    ' */' . "\n" .
-    '$breakpoints = array();' . "\n\n" .
-    '$breakpoint = new stdClass();' . "\n" .
-    '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */' . "\n" .
-    '$breakpoint->api_version = 1;' . "\n" .
-    '$breakpoint->machine_name = \'custom.user.mobile\';' . "\n" .
-    '$breakpoint->name = \'mobile\';' . "\n" .
-    '$breakpoint->breakpoint = \'(min-width: 0px)\';' . "\n" .
-    '$breakpoint->source = \'user\';' . "\n" .
-    '$breakpoint->source_type = \'custom\';' . "\n" .
-    '$breakpoint->status = 1;' . "\n" .
-    '$breakpoint->weight = 4;' . "\n" .
-    '$breakpoint->multipliers = array(' . "\n" .
-    '  \'1.5x\' => 0,' . "\n" .
-    '  \'2x\' => 0,' . "\n" .
-    ');' . "\n" .
-    "\n" .
-    '$breakpoints[] = $breakpoint;' . "\n" .
-    "\n" .
-    '$breakpoint = new stdClass();' . "\n" .
-    '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */' . "\n" .
-    '$breakpoint->api_version = 1;' . "\n" .
-    '$breakpoint->machine_name = \'custom.user.narrow\';' . "\n" .
-    '$breakpoint->name = \'narrow\';' . "\n" .
-    '$breakpoint->breakpoint = \'(min-width: 560px)\';' . "\n" .
-    '$breakpoint->source = \'user\';' . "\n" .
-    '$breakpoint->source_type = \'custom\';' . "\n" .
-    '$breakpoint->status = 1;' . "\n" .
-    '$breakpoint->weight = 5;' . "\n" .
-    '$breakpoint->multipliers = array(' . "\n" .
-    '  \'1.5x\' => 0,' . "\n" .
-    '  \'2x\' => 0,' . "\n" .
-    ');' . "\n" .
-    "\n" .
-    '$breakpoints[] = $breakpoint;' . "\n" .
-    "\n" .
-    '$breakpoint = new stdClass();' . "\n" .
-    '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */' . "\n" .
-    '$breakpoint->api_version = 1;' . "\n" .
-    '$breakpoint->machine_name = \'custom.user.wide\';' . "\n" .
-    '$breakpoint->name = \'wide\';' . "\n" .
-    '$breakpoint->breakpoint = \'(min-width: 851px)\';' . "\n" .
-    '$breakpoint->source = \'user\';' . "\n" .
-    '$breakpoint->source_type = \'custom\';' . "\n" .
-    '$breakpoint->status = 1;' . "\n" .
-    '$breakpoint->weight = 6;' . "\n" .
-    '$breakpoint->multipliers = array(' . "\n" .
-    '  \'1.5x\' => 0,' . "\n" .
-    '  \'2x\' => 0,' . "\n" .
-    ');' . "\n" .
-    "\n" .
-    '$breakpoints[] = $breakpoint;' . "\n" .
-    "\n" .
-    '$breakpoint = new stdClass();' . "\n" .
-    '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */' . "\n" .
-    '$breakpoint->api_version = 1;' . "\n" .
-    '$breakpoint->machine_name = \'custom.user.tv\';' . "\n" .
-    '$breakpoint->name = \'tv\';' . "\n" .
-    '$breakpoint->breakpoint = \'only screen and (min-width: 3456px)\';' . "\n" .
-    '$breakpoint->source = \'user\';' . "\n" .
-    '$breakpoint->source_type = \'custom\';' . "\n" .
-    '$breakpoint->status = 1;' . "\n" .
-    '$breakpoint->weight = 7;' . "\n" .
-    '$breakpoint->multipliers = array(' . "\n" .
-    '  \'1.5x\' => 0,' . "\n" .
-    '  \'2x\' => 0,' . "\n" .
-    ');' . "\n" .
-    "\n" .
-    '$breakpoints[] = $breakpoint;' . "\n" .
-    "\n" .
-    '/**' . "\n" .
-    ' * Breakpoint group.' . "\n" .
-    ' */' . "\n" .
-    '$breakpoint_group = new stdClass();' . "\n" .
-    '$breakpoint_group->disabled = FALSE; /* Edit this to true to make a default breakpoint_group disabled initially */' . "\n" .
-    '$breakpoint_group->api_version = 1;' . "\n" .
-    '$breakpoint_group->machine_name = \'customgroup\';' . "\n" .
-    '$breakpoint_group->name = \'Customgroup\';' . "\n" .
-    '$breakpoint_group->breakpoints = $breakpoints;' . "\n" .
-    '$breakpoint_group->type = \'custom\';' . "\n" .
-    '$breakpoint_group->overridden = 0;' . "\n";
+    $importstring = array();
+    $importstring[] = '/**';
+    $importstring[] = ' * Breakpoints.';
+    $importstring[] = ' */';
+    $importstring[] = '$breakpoints = array();';
+    $importstring[] = '$breakpoint = new stdClass();';
+    $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
+    $importstring[] = '$breakpoint->api_version = 1;';
+    $importstring[] = '$breakpoint->machine_name = \'custom.user.mobile\';';
+    $importstring[] = '$breakpoint->name = \'mobile\';';
+    $importstring[] = '$breakpoint->breakpoint = \'(min-width: 0px)\';';
+    $importstring[] = '$breakpoint->source = \'user\';';
+    $importstring[] = '$breakpoint->source_type = \'custom\';';
+    $importstring[] = '$breakpoint->status = 1;';
+    $importstring[] = '$breakpoint->weight = 4;';
+    $importstring[] = '$breakpoint->multipliers = array(';
+    $importstring[] = '  \'1.5x\' => 0,';
+    $importstring[] = '  \'2x\' => 0,';
+    $importstring[] = ');';
+    $importstring[] = "\n" .
+    $importstring[] = '$breakpoints[] = $breakpoint;';
+    $importstring[] = "\n" .
+    $importstring[] = '$breakpoint = new stdClass();';
+    $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
+    $importstring[] = '$breakpoint->api_version = 1;';
+    $importstring[] = '$breakpoint->machine_name = \'custom.user.narrow\';';
+    $importstring[] = '$breakpoint->name = \'narrow\';';
+    $importstring[] = '$breakpoint->breakpoint = \'(min-width: 560px)\';';
+    $importstring[] = '$breakpoint->source = \'user\';';
+    $importstring[] = '$breakpoint->source_type = \'custom\';';
+    $importstring[] = '$breakpoint->status = 1;';
+    $importstring[] = '$breakpoint->weight = 5;';
+    $importstring[] = '$breakpoint->multipliers = array(';
+    $importstring[] = '  \'1.5x\' => 0,';
+    $importstring[] = '  \'2x\' => 0,';
+    $importstring[] = ');';
+    $importstring[] = "\n" .
+    $importstring[] = '$breakpoints[] = $breakpoint;';
+    $importstring[] = "\n" .
+    $importstring[] = '$breakpoint = new stdClass();';
+    $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
+    $importstring[] = '$breakpoint->api_version = 1;';
+    $importstring[] = '$breakpoint->machine_name = \'custom.user.wide\';';
+    $importstring[] = '$breakpoint->name = \'wide\';';
+    $importstring[] = '$breakpoint->breakpoint = \'(min-width: 851px)\';';
+    $importstring[] = '$breakpoint->source = \'user\';';
+    $importstring[] = '$breakpoint->source_type = \'custom\';';
+    $importstring[] = '$breakpoint->status = 1;';
+    $importstring[] = '$breakpoint->weight = 6;';
+    $importstring[] = '$breakpoint->multipliers = array(';
+    $importstring[] = '  \'1.5x\' => 0,';
+    $importstring[] = '  \'2x\' => 0,';
+    $importstring[] = ');';
+    $importstring[] = "\n" .
+    $importstring[] = '$breakpoints[] = $breakpoint;';
+    $importstring[] = "\n" .
+    $importstring[] = '$breakpoint = new stdClass();';
+    $importstring[] = '$breakpoint->disabled = FALSE; /* Edit this to true to make a default breakpoint disabled initially */';
+    $importstring[] = '$breakpoint->api_version = 1;';
+    $importstring[] = '$breakpoint->machine_name = \'custom.user.tv\';';
+    $importstring[] = '$breakpoint->name = \'tv\';';
+    $importstring[] = '$breakpoint->breakpoint = \'only screen and (min-width: 3456px)\';';
+    $importstring[] = '$breakpoint->source = \'user\';';
+    $importstring[] = '$breakpoint->source_type = \'custom\';';
+    $importstring[] = '$breakpoint->status = 1;';
+    $importstring[] = '$breakpoint->weight = 7;';
+    $importstring[] = '$breakpoint->multipliers = array(';
+    $importstring[] = '  \'1.5x\' => 0,';
+    $importstring[] = '  \'2x\' => 0,';
+    $importstring[] = ');';
+    $importstring[] = "\n" .
+    $importstring[] = '$breakpoints[] = $breakpoint;';
+    $importstring[] = "\n" .
+    $importstring[] = '/**';
+    $importstring[] = ' * Breakpoint group.';
+    $importstring[] = ' */';
+    $importstring[] = '$breakpoint_group = new stdClass();';
+    $importstring[] = '$breakpoint_group->disabled = FALSE; /* Edit this to true to make a default breakpoint_group disabled initially */';
+    $importstring[] = '$breakpoint_group->api_version = 1;';
+    $importstring[] = '$breakpoint_group->machine_name = \'customgroup\';';
+    $importstring[] = '$breakpoint_group->name = \'Customgroup\';';
+    $importstring[] = '$breakpoint_group->breakpoints = $breakpoints;';
+    $importstring[] = '$breakpoint_group->type = \'custom\';';
+    $importstring[] = '$breakpoint_group->overridden = 0;';
 
     $this->drupalGet('admin/config/media/breakpoints/groups/import');
     $edit = array(
-      "import" => $importstring,
+      "import" => implode("\n", $importstring),
     );
     $this->drupalPost(NULL, $edit, t('Import'));
 
@@ -688,6 +695,12 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
 
     // Verify the breakpoint group exports correctly.
     $this->drupalGet('admin/config/media/breakpoints/groups/' . $breakpoint_group->machine_name . '/export');
-    $this->assertFieldByName('export', $importstring, t('Breakpoint group exported correctly.'));
+    foreach ($importstring as $importline) {
+      $importline = trim($importline);
+      if (!empty($importline)) {
+        // Text in a textarea is htmlencoded.
+        $this->assertRaw(check_plain($importline));
+      }
+    }
   }
 }
