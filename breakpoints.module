@@ -3,6 +3,7 @@
 /**
  * @file
  * Breakpoints
+ * @todo: provide button to reload breakpoints from theme
  */
 
 define('BREAKPOINTS_SOURCE_TYPE_THEME', 'theme');
@@ -50,6 +51,7 @@ function breakpoints_enable() {
 /**
  * Implements hook_themes_enabled();
  * Import breakpoints from all new enabled themes.
+ * Do not use breakpoints_breakpoints_group_reload_from_theme as is clears the cache.
  */
 function breakpoints_themes_enabled($theme_list) {
   $themes = list_themes();
@@ -677,4 +679,83 @@ function breakpoints_theme() {
 function breakpoint_group_export_breakpoints($object, $field, $value, $indent) {
   $export = '$breakpoints';
   return $export;
+}
+
+/**
+ * Reload the breakpoints as defined by the group.
+ */
+function breakpoints_breakpoints_group_reload(&$group) {
+  switch ($group->type) {
+    case BREAKPOINTS_SOURCE_TYPE_THEME:
+      // delete all breakpoints defined by this theme.
+      $breakpoints = breakpoints_breakpoint_load_all_theme($group->machine_name);
+      foreach ($breakpoints as $breakpoint) {
+        breakpoints_breakpoint_delete($breakpoint, $theme_key);
+      }
+
+      // reload all breakpoints from theme.info.
+      $reloaded_group = breakpoints_breakpoints_group_reload_from_theme($group->machine_name);
+      $group->breakpoints = $reloaded_group->breakpoints;
+      breakpoints_breakpoint_group_save($group);
+      break;
+  }
+}
+
+function breakpoints_breakpoints_group_reload_from_theme($theme_key) {
+  // Clear caches so theme.info is fresh.
+  system_rebuild_theme_data();
+  drupal_theme_rebuild();
+
+  $themes = list_themes();
+  if (isset($themes[$theme_key]->info['breakpoints'])) {
+    $weight = 0;
+    $theme_settings = $themes[$theme_key]->info['breakpoints'];
+    // Build a group for each theme
+    $breakpoint_group = breakpoints_breakpoint_group_empty_object();
+    $breakpoint_group->machine_name = $theme_key;
+    $breakpoint_group->name = $themes[$theme_key]->info['name'];
+    $breakpoint_group->type = BREAKPOINTS_SOURCE_TYPE_THEME;
+    foreach ($theme_settings as $name => $media_query) {
+      $breakpoint = breakpoints_breakpoint_empty_object();
+      $breakpoint->name = $name;
+      $breakpoint->breakpoint = $media_query;
+      $breakpoint->source = $theme_key;
+      $breakpoint->source_type = 'theme';
+      $breakpoint->theme = '';
+      $breakpoint->status = TRUE;
+      $breakpoint->weight = $weight++;
+      $breakpoint->machine_name = breakpoints_breakpoint_config_name($breakpoint);
+      breakpoints_breakpoint_save($breakpoint);
+      $breakpoint_group->breakpoints[] = $breakpoint->machine_name;
+    }
+    return $breakpoint_group;
+  }
+}
+
+/**
+ * Revert the breakpoints of a group.
+ */
+function breakpoints_breakpoints_group_revert(&$group) {
+  breakpoints_breakpoints_group_reload($group);
+  $group->overridden = 0;
+  breakpoints_breakpoint_group_save($group);
+}
+
+/**
+ * Override the breakpoints of a group.
+ */
+function breakpoints_breakpoints_group_override($group) {
+  foreach ($group->breakpoints as $key => $breakpoint) {
+    $old_breakpoint = $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+    if ($breakpoint->source_type == BREAKPOINTS_SOURCE_TYPE_THEME && $breakpoint->source == $group->machine_name) {
+      unset($breakpoint->id);
+      $breakpoint->machine_name = 'custom.' . $breakpoint->source . '.' . str_replace('-', '_', drupal_clean_css_identifier($breakpoint->name));
+      $breakpoint->source_type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
+      breakpoints_breakpoint_save($breakpoint);
+      $group->breakpoints[$key] = $breakpoint->machine_name;
+      breakpoints_breakpoint_delete($old_breakpoint, $group->machine_name);
+    }
+  }
+  $group->overridden = 1;
+  breakpoints_breakpoint_group_save($group);
 }
