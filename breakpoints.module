@@ -751,11 +751,31 @@ function breakpoints_breakpoints_group_override($group) {
       unset($breakpoint->id);
       $breakpoint->machine_name = 'custom.' . $breakpoint->source . '.' . str_replace('-', '_', drupal_clean_css_identifier($breakpoint->name));
       $breakpoint->source_type = BREAKPOINTS_SOURCE_TYPE_CUSTOM;
-      breakpoints_breakpoint_save($breakpoint);
+
+      // make sure it doesn't already exists.
+      if (breakpoints_breakpoint_load_by_fullkey($breakpoint->machine_name) === FALSE) {
+        breakpoints_breakpoint_save($breakpoint);
+      }
+
+      // Add to the group and delete old breakpoint.
       $group->breakpoints[$key] = $breakpoint->machine_name;
       breakpoints_breakpoint_delete($old_breakpoint, $group->machine_name);
     }
   }
   $group->overridden = 1;
   breakpoints_breakpoint_group_save($group);
+}
+
+/**
+ * Export breakpoints ready for theme.info inclusion.
+ */
+function breakpoints_breakpoints_group_exporttotheme(&$group) {
+  $export = array();
+  foreach ($group->breakpoints as $breakpoint_name) {
+    $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint_name);
+    if ($breakpoint && $breakpoint->status) {
+      $export[$breakpoint->name] = $breakpoint->breakpoint;
+    }
+  }
+  return $export;
 }
