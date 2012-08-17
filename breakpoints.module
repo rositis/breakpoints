@@ -746,7 +746,8 @@ function breakpoints_breakpoints_group_revert(&$group) {
  */
 function breakpoints_breakpoints_group_override($group) {
   foreach ($group->breakpoints as $key => $breakpoint) {
-    $old_breakpoint = $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+    $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+    $old_breakpoint = clone $breakpoint;
     if ($breakpoint->source_type == BREAKPOINTS_SOURCE_TYPE_THEME && $breakpoint->source == $group->machine_name) {
       unset($breakpoint->id);
       $breakpoint->machine_name = 'custom.' . $breakpoint->source . '.' . str_replace('-', '_', drupal_clean_css_identifier($breakpoint->name));
