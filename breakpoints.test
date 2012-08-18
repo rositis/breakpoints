@@ -820,14 +820,6 @@ class BreakpointMultipliersTestCase extends DrupalWebTestCase {
     $this->assertText(t('Multiplier 1x can not be deleted!'), t('Multiplier 1x can not be deleted'));
     $this->assertNoFieldById('edit-submit');
 
-    // Verify we need to enter a machine readable name.
-    $this->drupalGet('admin/config/media/breakpoints/multipliers');
-    $edit = array(
-      'multipliers[new]' => '**',
-    );
-    $this->drupalPost(NULL, $edit, t('Save'));
-    $this->assertText(t('The machine-readable name must contain only lowercase letters, numbers, and underscores.'));
-
     // Add a multiplier.
     $new_multiplier = drupal_strtolower($this->randomName());
     $this->drupalGet('admin/config/media/breakpoints/multipliers');
