@@ -1010,33 +1010,18 @@ function breakpoints_multipliers_form($form, &$form_state) {
   );
   foreach ($multipliers as $multiplier) {
     $form['multipliers'][$multiplier] = array(
-      '#type' => 'machine_name',
+      '#type' => 'textfield',
       '#title' => '',
       '#required' => FALSE,
       '#default_value' => $multiplier,
-      '#description' => t('A unique machine-readable name. Can only contain lowercase letters, numbers, comma\'s, dots and underscores.'),
-      '#machine_name' => array(
-        'replace_pattern' => '[^a-z0-9_\.,]+',
-        // dummy function, appearantly required, we always return false and do
-        // our validation in the form validation function, as they can change
-        // multiple names at the same time.
-        'exists' => '_breakpoint_multipliers_exist',
-      ),
     );
   }
   $form['multipliers']['new'] = array(
-    '#type' => 'machine_name',
+    '#type' => 'textfield',
     '#title' => '',
     '#required' => FALSE,
     '#default_value' => '',
-    '#description' => t('A unique machine-readable name. Can only contain lowercase letters, numbers, comma\'s, dots and underscores.'),
-    '#machine_name' => array(
-        'replace_pattern' => '[^a-z0-9_\.,]+',
-        // dummy function, appearantly required, we always return false and do
-        // our validation in the form validation function, as they can change
-        // multiple names at the same time.
-        'exists' => '_breakpoint_multipliers_exist',
-      ),
+    '#description' => t('Multiplier like 1.5x, 2x.'),
   );
 
   $form['submit'] = array(
@@ -1044,14 +1029,6 @@ function breakpoints_multipliers_form($form, &$form_state) {
     '#value' => t('Save'),
   );
   return $form;
-}
-
-/**
- * Dummy function.
- * @see breakpoints_multipliers_form()
- */
-function _breakpoint_multipliers_exist($multiplier) {
-  return FALSE;
 }
 
 function theme_breakpoints_multipliers_table_form($element) {
@@ -1143,7 +1120,7 @@ function breakpoints_admin_breakpoint_group_duplicate_form($form, &$form_state, 
     '#size' => '64',
     '#title' => t('New group name'),
     '#required' => TRUE,
-    '#default_value' => t('Duplicate of ') . $src_group->name,
+    '#default_value' => t('Duplicate of') . ' ' . $src_group->name,
   );
 
   $form['machine_name'] = array(
