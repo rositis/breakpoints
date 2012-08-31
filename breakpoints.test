@@ -717,6 +717,9 @@ class BreakpointGroupAdminTestCase extends BreakpointGroupTestCase {
   }
 }
 
+/**
+ * Test breakpoints provided by themes.
+ */
 class BreakpointsThemeTestCase extends BreakpointGroupTestCase {
   public static function getInfo() {
     return array(
@@ -737,6 +740,9 @@ class BreakpointsThemeTestCase extends BreakpointGroupTestCase {
     $this->drupalLogin($this->admin_user);
   }
 
+  /**
+   * Test the breakpoints provided by a theme.
+   */
   public function testThemeBreakpoints() {
     // Verify the breakpoint group for breakpoints_test_theme was created.
     $breakpoint_group = new stdClass();
@@ -779,6 +785,9 @@ class BreakpointsThemeTestCase extends BreakpointGroupTestCase {
   }
 }
 
+/**
+ * Test breakpoint multipliers.
+ */
 class BreakpointMultipliersTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
