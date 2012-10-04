@@ -644,23 +644,29 @@ function breakpoints_add_style_form($form, &$form_state) {
     '#required' => TRUE,
   );
   $breakpoints = breakpoints_breakpoint_load_all_active();
-  $options = array();
-  foreach ($breakpoints as $breakpoint) {
-    $options[$breakpoint->breakpoint] = $breakpoint->name . ' (' . $breakpoint->breakpoint . ')';
+  if (isset($breakpoints) && !empty($breakpoints)) {
+    $options = array();
+    foreach ($breakpoints as $breakpoint) {
+      $options[$breakpoint->breakpoint] = $breakpoint->name . ' (' . $breakpoint->breakpoint . ')';
+    }
+    $form['breakpoints'] = array(
+      '#title' => t('breakpoints'),
+      '#type' => 'checkboxes',
+      '#options' => $options,
+      '#default_value' => drupal_map_assoc(array_keys($options)),
+      '#description' => t('Select the breakpoints to create an image style for'),
+      '#required' => TRUE,
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Create'),
+    );
   }
-  $form['breakpoints'] = array(
-    '#title' => t('breakpoints'),
-    '#type' => 'checkboxes',
-    '#options' => $options,
-    '#default_value' => drupal_map_assoc(array_keys($options)),
-    '#description' => t('Select the breakpoints to create an image style for'),
-    '#required' => TRUE,
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Create'),
-  );
+  else {
+    $form['redirect_link'] = array(
+      '#markup' => t("You need to create a breakpoint first before creating a responsive style. ") . l('Click here', 'admin/config/media/breakpoints') . t(" to continue with configuring breakpoints."),
+    );
+  }
   return $form;
 }
 
