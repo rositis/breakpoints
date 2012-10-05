@@ -572,7 +572,7 @@ function breakpoints_admin_breakpoint_actions_page($group_name, $action, $breakp
 }
 
 /**
- * Admin action form: enable, disable, delete
+ * Admin action form: enable, disable, delete, export
  */
 function breakpoints_admin_breakpoint_actions_form($form, &$form_state, $group_name, $action, $breakpoint) {
   switch ($action) {

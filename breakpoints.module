@@ -453,6 +453,10 @@ function breakpoints_breakpoint_save(&$breakpoint) {
     $breakpoint->machine_name = breakpoints_breakpoint_config_name($breakpoint);
   }
   $update = (isset($breakpoint->id) && is_numeric($breakpoint->id)) ? array('id') : array();
+  // Remove unused multipliers.
+  $breakpoint->multipliers = array_filter($breakpoint->multipliers);
+  // Add the '1x' multiplier.
+  $breakpoint->multipliers = array('1x' => '1x') + $breakpoint->multipliers;
   $result = drupal_write_record('breakpoints', $breakpoint, $update);
   // Reset CTools cache.
   ctools_export_load_object_reset('breakpoints');
