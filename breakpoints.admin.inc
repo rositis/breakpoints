@@ -840,14 +840,33 @@ function breakpoints_admin_breakpoint_group_export_form($form, &$form_state, $ma
   if (!$group || !$machine_name) {
     $group = new stdClass();
   }
-  $export = breakpoints_breakpoint_group_export($group);
+  $group_export = breakpoints_breakpoint_group_export($group);
 
-  $form['export'] = array(
+  $form['group_export'] = array(
     '#type' => 'textarea',
     '#title' => t('Breakpoint group code'),
-    '#rows' => count(explode("\n", $export)),
-    '#default_value' => $export,
+    '#rows' => count(explode("\n", $group_export)),
+    '#default_value' => $group_export,
   );
+
+  $breakpoints_export = NULL;
+  if (isset($group->breakpoints)) {
+    foreach ($group->breakpoints as $breakpoint) {
+      if (!is_array($breakpoint) && !is_object($breakpoint)) {
+        $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+      }
+      $breakpoints_export .= ctools_export_object('breakpoints', $breakpoint);
+      $breakpoints_export .= "\n";
+    }
+  }
+
+  $form['breakpoints_export'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Breakpoints code'),
+    '#rows' => count(explode("\n", $breakpoints_export)),
+    '#default_value' => $breakpoints_export,
+  );
+
   return $form;
 }
 
