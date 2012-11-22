@@ -648,7 +648,7 @@ function breakpoints_add_style_form($form, &$form_state) {
     $options = array();
     foreach ($breakpoints as $breakpoint) {
       foreach ($breakpoint->multipliers as $multiplier) {
-        $options[str_replace('.', '_', $breakpoint->machine_name) . '_' . $multiplier] = $breakpoint->name . ' [' . $breakpoint->breakpoint . ', multiplier:' . $multiplier . ']';
+        $options[str_replace('.', '_', $breakpoint->machine_name . '_' . $multiplier)] = $breakpoint->name . ' [' . $breakpoint->breakpoint . ', multiplier:' . $multiplier . ']';
       }
     }
     $form['breakpoints'] = array(
