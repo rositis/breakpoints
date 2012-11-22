@@ -647,7 +647,9 @@ function breakpoints_add_style_form($form, &$form_state) {
   if (isset($breakpoints) && !empty($breakpoints)) {
     $options = array();
     foreach ($breakpoints as $breakpoint) {
-      $options[$breakpoint->breakpoint] = $breakpoint->name . ' (' . $breakpoint->breakpoint . ')';
+      foreach ($breakpoint->multipliers as $multiplier) {
+        $options[str_replace('.', '_', $breakpoint->machine_name) . '_' . $multiplier] = $breakpoint->name . ' [' . $breakpoint->breakpoint . ', multiplier:' . $multiplier . ']';
+      }
     }
     $form['breakpoints'] = array(
       '#title' => t('breakpoints'),
@@ -686,9 +688,15 @@ function breakpoints_add_style_form_submit($form, &$form_state) {
   foreach (array_filter($form_state['values']['breakpoints']) as $breakpoint) {
     $new_style = array(
       'name' => $form_state['values']['base_name'] . $breakpoint,
-      'effects' => $base['effects'],
     );
-    image_style_save($new_style);
+    $style = image_style_save($new_style);
+    if ($style) {
+      foreach ($base['effects'] as $effect) {
+        $effect['isid'] = $style['isid'];
+        unset($effect['ieid']);
+        image_effect_save($effect);
+      }
+    }
   }
   $form_state['redirect'] = 'admin/config/media/image-styles';
   drupal_set_message(t('The new styles have been created'));
