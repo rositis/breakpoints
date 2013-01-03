@@ -703,7 +703,7 @@ function breakpoints_breakpoints_group_reload(&$group) {
       // delete all breakpoints defined by this theme.
       $breakpoints = breakpoints_breakpoint_load_all_theme($group->machine_name);
       foreach ($breakpoints as $breakpoint) {
-        breakpoints_breakpoint_delete($breakpoint, $theme_key);
+        breakpoints_breakpoint_delete($breakpoint);
       }
 
       // reload all breakpoints from theme.info.
