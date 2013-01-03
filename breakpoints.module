@@ -813,7 +813,7 @@ function breakpoints_breakpoints_group_exporttotheme(&$group) {
 function _breakpoints_filter_styles($var) {
   static $exists = NULL;
   if (is_null($exists)) {
-    $exists = module_exists('resp_img');
+    $exists = module_exists('resp_img') && defined('RESP_IMG_STYLE_PREFIX');
   }
   if (!$exists) {
     return TRUE;
