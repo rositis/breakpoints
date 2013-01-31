@@ -56,7 +56,7 @@ function breakpoints_enable() {
 function breakpoints_themes_enabled($theme_list) {
   $themes = list_themes();
   foreach ($theme_list as $theme_key) {
-    if (isset($themes[$theme_key]->info['breakpoints'])) {
+    if (isset($themes[$theme_key]->info['breakpoints']) && $themes[$theme_key]->status) {
       $weight = 0;
       $theme_settings = $themes[$theme_key]->info['breakpoints'];
       // Build a group for each theme
