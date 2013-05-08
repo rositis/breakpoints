@@ -843,5 +843,11 @@ function breakpoints_form_system_theme_settings_alter(&$form, &$form_state) {
 
 function breakpoints_form_system_theme_settings_alter_submit(&$form, &$form_state) {
   $theme = $form_state['build_info']['args'][0];
-  breakpoints_breakpoints_group_reload_from_theme($theme);
+  $group = breakpoints_breakpoint_group_load($theme);
+  if ($group) {
+    breakpoints_breakpoints_group_reload($group);
+  }
+  else {
+    breakpoints_themes_enabled(array($theme));
+  }
 }
