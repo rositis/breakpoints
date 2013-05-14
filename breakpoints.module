@@ -45,6 +45,11 @@ function breakpoints_ctools_plugin_api($owner, $api) {
  */
 function breakpoints_enable() {
   $themes = list_themes();
+  foreach ($themes as $theme_key => $theme) {
+    if (!$theme->status) {
+      unset($themes[$theme_key]);
+    }
+  }
   breakpoints_themes_enabled(array_keys($themes));
 }
 
@@ -56,7 +61,7 @@ function breakpoints_enable() {
 function breakpoints_themes_enabled($theme_list) {
   $themes = list_themes();
   foreach ($theme_list as $theme_key) {
-    if (isset($themes[$theme_key]->info['breakpoints']) && $themes[$theme_key]->status) {
+    if (isset($themes[$theme_key]->info['breakpoints'])) {
       $weight = 0;
       $theme_settings = $themes[$theme_key]->info['breakpoints'];
       // Build a group for each theme
