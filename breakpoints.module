@@ -856,3 +856,18 @@ function breakpoints_form_system_theme_settings_alter_submit(&$form, &$form_stat
     breakpoints_themes_enabled(array($theme));
   }
 }
+
+/**
+ * Implements hook_features_export().
+ */
+function breakpoint_group_features_export($data, &$export, $module_name = '') {
+  features_include();
+  $pipe = ctools_component_features_export('breakpoint_group', $data, $export, $module_name);
+  foreach ($data as $group_name) {
+    $group = breakpoints_breakpoint_group_load($group_name);
+    foreach ($group->breakpoints as $breakpoint_name) {
+      $pipe['breakpoints'][] = $breakpoint_name;
+    }
+  }
+  return $pipe;
+}
