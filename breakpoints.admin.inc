@@ -432,9 +432,6 @@ function breakpoints_admin_breakpoints_validate($form, &$form_state) {
               form_set_error('breakpoints][' . $key . '][machine_name', 'Machine name field is required');
             }
           }
-          if (empty($breakpointdata['breakpoint']) && $breakpointdata['breakpoint'] !== '0') {
-            form_set_error('breakpoints][' . $key . '][breakpoint', 'Breakpoint field is required');
-          }
         }
       }
     }
