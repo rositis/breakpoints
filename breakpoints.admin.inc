@@ -466,7 +466,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
             $breakpoint->weight = $breakpointdata['global_weight'];
           }
           $breakpoint->breakpoint = $breakpointdata['breakpoint'];
-          $breakpoint->multipliers = $breakpointdata['multipliers'];
+          $breakpoint->multipliers = isset($breakpointdata['multipliers']) ? $breakpointdata['multipliers'] : array();
           breakpoints_breakpoint_save($breakpoint);
           $saved_breakpoints[] = $breakpointname;
         }
@@ -478,7 +478,7 @@ function breakpoints_admin_breakpoints_submit($form, &$form_state) {
           $breakpoint->source_type = 'custom';
           $breakpoint->weight = $breakpointdata['weight'];
           $breakpoint->status = TRUE;
-          $breakpoint->multipliers = $breakpointdata['multipliers'];
+          $breakpoint->multipliers = isset($breakpointdata['multipliers']) ? $breakpointdata['multipliers'] : array();
           $breakpoint->machine_name = 'custom.user.' . $breakpointdata['machine_name'];
           breakpoints_breakpoint_save($breakpoint);
           $saved_breakpoints[] = breakpoints_breakpoint_config_name($breakpoint);
