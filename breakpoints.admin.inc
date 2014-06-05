@@ -116,7 +116,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
       'breakpoint' => array(
         '#type' => 'textfield',
         '#default_value' => $breakpoint->breakpoint,
-        '#disabled' => $breakpoint->source_type === 'theme' || !$global,
+        '#disabled' => $breakpoint->source_type === BREAKPOINTS_SOURCE_TYPE_THEME || !$global,
         '#size' => empty($multipliers) ? 60 : 30,
         '#maxlength' => 255,
       ),
