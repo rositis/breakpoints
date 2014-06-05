@@ -683,8 +683,17 @@ function breakpoints_theme() {
  * @see breakpoints_schema()
  */
 function breakpoint_group_export_breakpoints($object, $field, $value, $indent) {
-  $export = '$breakpoints';
-  return $export;
+  ctools_include('export');
+  $export = array();
+  if (isset($object->breakpoints)) {
+    foreach ($object->breakpoints as $breakpoint) {
+      if (!is_array($breakpoint) && !is_object($breakpoint)) {
+        $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
+      }
+      $export[] = $breakpoint->machine_name;
+    }
+  }
+  return ctools_var_export($export);
 }
 
 /**
