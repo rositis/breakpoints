@@ -134,6 +134,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
         '#type' => 'checkboxes',
         '#default_value' => (isset($breakpoint->multipliers) && is_array($breakpoint->multipliers)) ? $breakpoint->multipliers : array(),
         '#options' => $multipliers,
+        '#disabled' => $breakpoint->source_type === BREAKPOINTS_SOURCE_TYPE_THEME || !$global,
       );
     }
     // Add global weight if needed.

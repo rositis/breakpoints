@@ -64,6 +64,9 @@ function breakpoints_themes_enabled($theme_list) {
     if (isset($themes[$theme_key]->info['breakpoints'])) {
       $weight = 0;
       $theme_settings = $themes[$theme_key]->info['breakpoints'];
+      $multipliers = isset($themes[$theme_key]->info['multipliers']) ? $themes[$theme_key]->info['multipliers'] : array();
+      $settings = breakpoints_settings();
+      $current_multipliers = drupal_map_assoc($settings->multipliers);
       // Build a group for each theme
       $breakpoint_group = breakpoints_breakpoint_group_empty_object();
       $breakpoint_group->machine_name = $theme_key;
@@ -82,9 +85,12 @@ function breakpoints_themes_enabled($theme_list) {
           $breakpoint->machine_name = breakpoints_breakpoint_config_name($breakpoint);
         }
         $breakpoint->breakpoint = $media_query;
+        $breakpoint->multipliers = isset($multipliers[$name]) ? drupal_map_assoc($multipliers[$name]) : array();
+        $current_multipliers += drupal_map_assoc($breakpoint->multipliers);
         breakpoints_breakpoint_save($breakpoint);
         $breakpoint_group->breakpoints[] = $breakpoint->machine_name;
       }
+      breakpoints_settings_save($current_multipliers);
       breakpoints_breakpoint_group_save($breakpoint_group);
       $message = t('The breakpoints from theme %theme are imported and !grouplink.', array(
         '%theme' => check_plain($themes[$theme_key]->info['name']),
@@ -736,6 +742,9 @@ function breakpoints_breakpoints_group_reload_from_theme($theme_key) {
   if (isset($themes[$theme_key]->info['breakpoints'])) {
     $weight = 0;
     $theme_settings = $themes[$theme_key]->info['breakpoints'];
+    $multipliers = isset($themes[$theme_key]->info['multipliers']) ? $themes[$theme_key]->info['multipliers'] : array();
+    $settings = breakpoints_settings();
+    $current_multipliers = drupal_map_assoc($settings->multipliers);
     // Build a group for each theme
     $breakpoint_group = breakpoints_breakpoint_group_empty_object();
     $breakpoint_group->machine_name = $theme_key;
@@ -754,9 +763,12 @@ function breakpoints_breakpoints_group_reload_from_theme($theme_key) {
         $breakpoint->machine_name = breakpoints_breakpoint_config_name($breakpoint);
       }
       $breakpoint->breakpoint = $media_query;
+      $breakpoint->multipliers = isset($multipliers[$name]) ? drupal_map_assoc($multipliers[$name]) : array();
+      $current_multipliers += drupal_map_assoc($breakpoint->multipliers);
       breakpoints_breakpoint_save($breakpoint);
       $breakpoint_group->breakpoints[] = $breakpoint->machine_name;
     }
+    breakpoints_settings_save($current_multipliers);
     return $breakpoint_group;
   }
 }
