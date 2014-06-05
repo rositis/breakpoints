@@ -847,7 +847,7 @@ function breakpoints_admin_breakpoint_group_export_form($form, &$form_state, $ma
   if (!$group || !$machine_name) {
     $group = new stdClass();
   }
-  $group_export = breakpoints_breakpoint_group_export($group);
+  $group_export = ctools_export_crud_export('breakpoint_group', $group);
 
   $form['group_export'] = array(
     '#type' => 'textarea',

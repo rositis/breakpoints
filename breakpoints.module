@@ -633,28 +633,6 @@ function breakpoints_breakpoint_group_save(&$breakpoint_group) {
 }
 
 /**
- * Export a single breakpoint group.
- */
-function breakpoints_breakpoint_group_export($group, $indent = '') {
-  if (is_string($group)) {
-    $group = breakpoints_breakpoint_group_load($group);
-  }
-  $export = $indent . "// Breakpoints.\n" . $indent . '$breakpoints = array();' . "\n";
-  if (isset($group->breakpoints)) {
-    foreach ($group->breakpoints as $breakpoint) {
-      if (!is_array($breakpoint) && !is_object($breakpoint)) {
-        $breakpoint = breakpoints_breakpoint_load_by_fullkey($breakpoint);
-      }
-      $export .= $indent . '$breakpoints[] = \'' . $breakpoint->machine_name . '\';' . "\n";
-    }
-    $export .= "\n";
-  }
-  $export .= $indent . "// Breakpoint group.\n";
-  $export .= ctools_export_object('breakpoint_group', $group, $indent);
-  return $export;
-}
-
-/**
  * Delete a single breakpoint group.
  */
 function breakpoints_breakpoint_group_delete($breakpoint_group) {
@@ -702,7 +680,7 @@ function breakpoints_theme() {
 
 /**
  * Export callback.
- * @see breakpoints_schema(), breakpoints_breakpoint_group_export()
+ * @see breakpoints_schema()
  */
 function breakpoint_group_export_breakpoints($object, $field, $value, $indent) {
   $export = '$breakpoints';
