@@ -49,6 +49,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
     $info[] = t("For each breakpoint you can define what multipliers have to be available (needed to support 'retina' displays).");
     $info[] = t("Breakpoints you created yourself can be deleted.");
     $info[] = t("You can group multiple breakpoints in a group by using '!add', so other modules can easily interact with them.", array('!add' => l(t('Add a new group'), 'admin/config/media/breakpoints/groups/add')));
+    $info[] = t("If you do not see the breakpoint group for your theme, make sure your theme is enabled and !clear_cache or click the \"Scan this theme for breakpoints\" button on the bottom of the settings page of your theme.", array('!clear_cache' => l(t('clear your cache'), 'admin/config/development/performance')));
 
     $form['more_info'] = array(
       '#type' => 'container',
