@@ -693,7 +693,7 @@ function breakpoint_group_export_breakpoints($object, $field, $value, $indent) {
       $export[] = $breakpoint->machine_name;
     }
   }
-  return ctools_var_export($export);
+  return ctools_var_export($export, $indent);
 }
 
 /**
