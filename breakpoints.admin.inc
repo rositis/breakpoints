@@ -673,8 +673,17 @@ function breakpoints_add_style_form($form, &$form_state) {
 
 function breakpoints_add_style_form_validate($form, &$form_state) {
   foreach (array_filter($form_state['values']['breakpoints']) as $breakpoint) {
+    if (drupal_strlen($form_state['values']['base_name'] . $breakpoint) > 64) {
+      form_set_error(
+        'breakpoints',
+        t(
+          'Could not generate image styles because the generated name @name is longer than the maximum allowed length of 64 characters for image style names (@length characters).',
+          array('@name' => $form_state['values']['base_name'] . $breakpoint, '@length' => drupal_strlen($form_state['values']['base_name'] . $breakpoint))
+        )
+      );
+    }
     if (image_style_load($form_state['values']['base_name'] . $breakpoint)) {
-      form_set_error('breakpoints', t('An image style with the name !name already exists', array('!name' => $form_state['values']['base_name'] . $breakpoint)));
+      form_set_error('breakpoints', t('An image style with the name @name already exists', array('@name' => $form_state['values']['base_name'] . $breakpoint)));
     }
   }
 }
