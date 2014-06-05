@@ -424,7 +424,7 @@ function _breakpoints_admin_breakpoints_table_new_row(&$element) {
  */
 function breakpoints_admin_breakpoints_validate($form, &$form_state) {
   if (strpos($form_state['triggering_element']['#id'], 'remove') === FALSE) {
-    $breakpoints = $form_state['values']['breakpoints'];
+    $breakpoints = isset($form_state['values']['breakpoints']) ? $form_state['values']['breakpoints'] : array();
     if (!empty($breakpoints)) {
       foreach ($breakpoints as $key => $breakpointdata) {
         if (!empty($breakpointdata['name'])) {
