@@ -97,9 +97,9 @@ function breakpoints_themes_enabled($theme_list, $rebuild_menu = TRUE) {
       }
       breakpoints_settings_save($current_multipliers);
       breakpoints_breakpoint_group_save($breakpoint_group);
-      $message = t('The breakpoints from theme %theme are imported and !grouplink.', array(
-        '%theme' => check_plain($themes[$theme_key]->info['name']),
-        '!grouplink' => l(t('a new group is created'), 'admin/config/media/breakpoints/groups/' . $theme_key),
+      $message = t('The breakpoints from theme %theme are imported and <a href="@url">a new group is created</a>.', array(
+        '%theme' => $themes[$theme_key]->info['name'],
+        '@url' => url('admin/config/media/breakpoints/groups/' . $theme_key),
       ));
       drupal_set_message($message, 'status');
     }
