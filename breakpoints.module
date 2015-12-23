@@ -10,9 +10,6 @@ define('BREAKPOINTS_SOURCE_TYPE_THEME', 'theme');
 define('BREAKPOINTS_SOURCE_TYPE_MODULE', 'module');
 define('BREAKPOINTS_SOURCE_TYPE_CUSTOM', 'custom');
 define('BREAKPOINTS_GROUP', 'group');
-define('BREAKPOINTS_CID', 'breakpoints');
-define('BREAKPOINTS_GROUP_CID', 'breakpoint_groups');
-define('BREAKPOINTS_CACHE_BIN', 'cache');
 
 /**
  * Implements hook_permission().
@@ -363,19 +360,10 @@ function breakpoints_breakpoint_load($name, $source, $source_type) {
  * Load a single breakpoint using the full config key.
  */
 function breakpoints_breakpoint_load_by_fullkey($machine_name = NULL) {
-  $breakpoints = &drupal_static(__FUNCTION__, NULL);
+  $breakpoints = &drupal_static(__FUNCTION__);
 
-  if (!is_array($breakpoints)) {
-    // See if we have breakpoints stored in drupal's cache.
-    if ($cache = cache_get(BREAKPOINTS_CID)) {
-      $breakpoints = $cache->data;
-    }
-    else {
-      // Use Ctools export API to fetch all presets from the DB as well as code.
-      ctools_include('export');
-      $breakpoints = ctools_export_load_object('breakpoints');
-      cache_set(BREAKPOINTS_CID, $breakpoints, BREAKPOINTS_CACHE_BIN);
-    }
+  if (!isset($breakpoints)) {
+    $breakpoints = _breakpoints_breakpoint_load_all_callback();
   }
 
   if ($machine_name) {
@@ -383,6 +371,21 @@ function breakpoints_breakpoint_load_by_fullkey($machine_name = NULL) {
     return $breakpoint;
   }
   else {
+    return $breakpoints;
+  }
+}
+
+/**
+ * CTools export 'load all callback' CRUD callback for breakpoints.
+ */
+function _breakpoints_breakpoint_load_all_callback($reset = FALSE) {
+  if (!$reset && $cache = cache_get('breakpoints:breakpoints')) {
+    return $cache->data;
+  }
+  else {
+    ctools_include('export');
+    $breakpoints = ctools_export_load_object('breakpoints', 'all');
+    cache_set('breakpoints:breakpoints', $breakpoints);
     return $breakpoints;
   }
 }
@@ -496,12 +499,7 @@ function breakpoints_breakpoint_save(&$breakpoint) {
   // Add the '1x' multiplier.
   $breakpoint->multipliers = array_merge($breakpoint->multipliers, array('1x' => '1x'));
   $result = drupal_write_record('breakpoints', $breakpoint, $update);
-  // Reset CTools cache.
-  ctools_export_load_object_reset('breakpoints');
-
-  // Wipe the entry from the cache table.
-  cache_clear_all(BREAKPOINTS_CID, BREAKPOINTS_CACHE_BIN);
-
+  breakpoints_breakpoint_reset();
   return $result;
 }
 
@@ -521,12 +519,17 @@ function breakpoints_breakpoint_delete_by_fullkey($key) {
     $sql = "DELETE FROM {breakpoints} where machine_name = :key";
     db_query($sql, array(':key' => $key));
   }
-  // Clear the Ctools export API cache.
+  breakpoints_breakpoint_reset();
+}
+
+/**
+ * Clears the breakpoint caches.
+ */
+function breakpoints_breakpoint_reset() {
   ctools_include('export');
   ctools_export_load_object_reset('breakpoints');
-
-  // Wipe the entry from the cache table.
-  cache_clear_all(BREAKPOINTS_CID, BREAKPOINTS_CACHE_BIN);
+  drupal_static_reset('breakpoints_breakpoint_load_by_fullkey');
+  cache_clear_all('breakpoints:breakpoints', 'cache');
 }
 
 /**
@@ -596,28 +599,28 @@ function breakpoints_breakpoint_group_name_exists($machine_name) {
 /**
  * Load all breakpoint groups.
  */
-function breakpoints_breakpoint_group_load_all() {
-  return breakpoints_breakpoint_group_load();
+function breakpoints_breakpoint_group_load_all($reset = FALSE) {
+  $groups = &drupal_static(__FUNCTION__);
+
+  if (!isset($groups)) {
+    if (!$reset && $cache = cache_get('breakpoints:groups')) {
+      return $cache->data;
+    }
+    else {
+      ctools_include('export');
+      $groups = ctools_export_load_object('breakpoint_group', 'all');
+      cache_set('breakpoints:groups', $groups);
+    }
+  }
+
+  return $groups;
 }
 
 /**
  * Load a single breakpoint group.
  */
 function breakpoints_breakpoint_group_load($name = NULL) {
-  $groups = &drupal_static(__FUNCTION__, NULL);
-
-  if (!is_array($groups)) {
-    // See if we have breakpoints stored in drupal's cache.
-    if ($cache = cache_get(BREAKPOINTS_GROUP_CID)) {
-      $groups = $cache->data;
-    }
-    else {
-      // Use Ctools export API to fetch all presets from the DB as well as code.
-      ctools_include('export');
-      $groups = ctools_export_load_object('breakpoint_group');
-      cache_set(BREAKPOINTS_GROUP_CID, $groups, BREAKPOINTS_CACHE_BIN);
-    }
-  }
+  $groups = breakpoints_breakpoint_group_load_all();
 
   if ($name) {
     $group = isset($groups[$name]) ? $groups[$name] : FALSE;
@@ -670,11 +673,7 @@ function breakpoints_breakpoint_group_save(&$breakpoint_group) {
   if (empty ($update)) {
     variable_set('menu_rebuild_needed', TRUE);
   }
-  // Reset CTools cache.
-  ctools_export_load_object_reset('breakpoint_group');
-
-  // Wipe the entry from the cache table.
-  cache_clear_all(BREAKPOINTS_GROUP_CID, BREAKPOINTS_CACHE_BIN);
+  breakpoints_breakpoint_group_reset();
 
   return $result;
 }
@@ -703,13 +702,18 @@ function breakpoints_breakpoint_group_delete_by_fullkey($key) {
     $sql = "DELETE FROM {breakpoint_group} where machine_name = :key";
     db_query($sql, array(':key' => $key));
   }
-  // Clear the Ctools export API cache.
+  variable_set('menu_rebuild_needed', TRUE);
+  breakpoints_breakpoint_group_reset();
+}
+
+/**
+ * Clears the breakpoint group caches.
+ */
+function breakpoints_breakpoint_group_reset() {
   ctools_include('export');
   ctools_export_load_object_reset('breakpoint_group');
-  variable_set('menu_rebuild_needed', TRUE);
-
-  // Wipe the entry from the cache table.
-  cache_clear_all(BREAKPOINTS_GROUP_CID, BREAKPOINTS_CACHE_BIN);
+  drupal_static_reset('breakpoints_breakpoint_group_load_all');
+  cache_clear_all('breakpoints:groups', 'cache');
 }
 
 /**
