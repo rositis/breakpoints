@@ -61,6 +61,7 @@ function breakpoints_enable() {
 function breakpoints_themes_enabled($theme_list, $rebuild_menu = TRUE) {
   $themes = list_themes();
   $updated = FALSE;
+  $new_breakpoint_group = FALSE;
   foreach ($theme_list as $theme_key) {
     if (isset($themes[$theme_key]->info['breakpoints'])) {
       $updated = TRUE;
@@ -69,11 +70,15 @@ function breakpoints_themes_enabled($theme_list, $rebuild_menu = TRUE) {
       $multipliers = isset($themes[$theme_key]->info['multipliers']) ? $themes[$theme_key]->info['multipliers'] : array();
       $settings = breakpoints_settings();
       $current_multipliers = drupal_map_assoc($settings->multipliers);
-      // Build a group for each theme
-      $breakpoint_group = breakpoints_breakpoint_group_empty_object();
-      $breakpoint_group->machine_name = $theme_key;
-      $breakpoint_group->name = $themes[$theme_key]->info['name'];
-      $breakpoint_group->type = BREAKPOINTS_SOURCE_TYPE_THEME;
+      $breakpoint_group = breakpoints_breakpoint_group_load($theme_key);
+      if(!$breakpoint_group) {
+        // Build a group for each theme
+        $new_breakpoint_group = TRUE;
+        $breakpoint_group = breakpoints_breakpoint_group_empty_object();
+        $breakpoint_group->machine_name = $theme_key;
+        $breakpoint_group->name = $themes[$theme_key]->info['name'];
+        $breakpoint_group->type = BREAKPOINTS_SOURCE_TYPE_THEME;
+      }
       foreach ($theme_settings as $name => $media_query) {
         $breakpoint = breakpoints_breakpoint_load($name, $theme_key, 'theme');
         if (!$breakpoint) {
@@ -94,7 +99,12 @@ function breakpoints_themes_enabled($theme_list, $rebuild_menu = TRUE) {
       }
       breakpoints_settings_save($current_multipliers);
       breakpoints_breakpoint_group_save($breakpoint_group);
-      $message = t('The breakpoints from theme %theme are imported and <a href="@url">a new group is created</a>.', array(
+      if($new_breakpoint_group) {
+        $message_text = 'The breakpoints from theme %theme are imported and <a href="@url">a new group is created</a>.';
+      } else {
+        $message_text = 'The breakpoints from theme %theme are imported and <a href="@url">an existing group was updated</a>.';
+      }
+      $message = t($message_text, array(
         '%theme' => $themes[$theme_key]->info['name'],
         '@url' => url('admin/config/media/breakpoints/groups/' . $theme_key),
       ));
