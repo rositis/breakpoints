@@ -172,7 +172,7 @@ function breakpoints_menu() {
   );
 
   $items['admin/config/media/breakpoints/settings'] = array(
-    'title' => 'settings',
+    'title' => 'Settings',
     'description' => 'Manage breakpoint settings',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('breakpoints_admin_settings_form'),
