@@ -945,6 +945,9 @@ function breakpoint_group_features_export($data, &$export, $module_name = '') {
  * Implements hook_flush_caches().
  */
 function breakpoints_flush_caches() {
+  if (variable_get('breakpoints_flush_caches_disabled', FALSE)) {
+    return;
+  }
 
   // hook_flush_caches gets invoked with both drupal_flush_all_caches and system_cron
   // To avoid frequent menu/theme flushes, we must backtrace caller.
