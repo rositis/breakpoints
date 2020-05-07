@@ -1,31 +1,30 @@
-# SUMMARY
+Breakpoints
+======================
 
 **Breakpoints** are where a responsive design adjusts in order to display correctly on different devices. The Breakpoints module standardizes the use of breakpoints, and enables modules and themes to expose or use each others' breakpoints. The Breakpoint module keeps track of the height, width, and resolution breakpoints.
 
 Breakpoints itself does not natively use the breakpoints entered in order to provide additional functionality to the site; as a result, some theming or development knowledge is required in order to harness the power of breakpoints.
 
-# REQUIREMENTS
-
-## Required Modules
-
+Requirements
+------------
 The following module is required for Breakpoints to work.
 
 * [Chaos tool suite](https://www.drupal.org/project/ctools) (ctools)
 
-## Recommended Modules
-
+Recommended Modules
+------------
 Breakpoints also works hand-in-hand with a number of other modules for responsive solutions, which is recommended. These modules include:
 
 * [Picture](https://www.drupal.org/project/picture)
 * [Breakpoint Panels](https://www.drupal.org/project/breakpoint_panels)
 
-# INSTALLATION
-
+Installation
+------------
 1. Unzip the contents of the module in your sites/all/modules folder.
 2. Enable the module from your sites admin/modules.
 
-# CONFIGURATION
-
+Configuration
+------------
 Breakpoints can be configured in two ways: from the module configuration page or in the theme.info file. Once configured, breakpoints can be exported to themes or to responsive styles,
 
 Configuring breakpoints from the module configuration page provides several options that allows them to be used quickly, including exporting breakpoints or creating image styles to match breakpoints. To configure a breakpoint from the module configuration page:
@@ -56,8 +55,8 @@ breakpoints[tv] = only screen and (min-width: 3456px)
 
 *Note*: breakpoints made from a .info file will not be read until the theme has been reloaded, either on the theme page by clicking "Reload theme" or by disabling and enabling the theme.
 
-# USAGE
-
+Usage
+------------
 The main usage of Breakpoints comes entirely outside of the module itself. Because breakpoints defined either in the .info file or in the Breakpoints UI are available with a call to the breakpoints module, developers and themers can call on breakpoints in template.php (or in other modules). Modules such as [Picture](https://www.drupal.org/project/picture) and [Breakpoint Panels](https://www.drupal.org/project/breakpoint_panels) can use Breakpoints natively to create responsive pictures or panels, respectively. Use of Breakpoints with those modules, and others, can be found in their respective documentation.
 
 Aside from the ability to store breakpoints, the Breakpoints module also can convert stored Breakpoints to valid theme.info file format, using the following steps:
@@ -70,7 +69,14 @@ The results in the textbox on the resulting screen can then be copied to a theme
 
 *Note*: from this same screen, breakpoints may also be fully exported in a feature-ready format using the "Export nodes" link.
 
-# CONTACT
+Contact
+------------
 
 Project: https://www.drupal.org/project/breakpoints
 Issues: https://www.drupal.org/project/issues/breakpoints?categories=All
+
+Current Maintainers
+------------
+
+Credits
+------------

@@ -136,13 +136,13 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
     $mediaquery = '(min-width: 600px)';
     $edit = array(
       'breakpoints[new][name]' => $name,
-      'breakpoints[new][machine_name]' => drupal_strtolower($name),
+      'breakpoints[new][machine_name]' => backdrop_strtolower($name),
       'breakpoints[new][breakpoint]' => $mediaquery,
     );
 
     $this->drupalPost(NULL, $edit, t('Save'));
 
-    $machine_name = BREAKPOINTS_SOURCE_TYPE_CUSTOM . '.user.' . drupal_strtolower($name);
+    $machine_name = BREAKPOINTS_SOURCE_TYPE_CUSTOM . '.user.' . backdrop_strtolower($name);
     // Verify the breakpoint was saved and verify default weight of the breakpoint.
     $this->drupalGet('admin/config/media/breakpoints');
     $this->assertFieldByName("breakpoints[$machine_name][weight]", 0, t('Breakpoint weight was saved.'));
@@ -192,7 +192,7 @@ class BreakpointsAdminTestCase extends BreakpointsTestCase {
     // breakpoint but with a different human readable name.
     $edit = array(
       'breakpoints[new][name]' => 'New Breakpoint',
-      'breakpoints[new][machine_name]' => drupal_strtolower($name),
+      'breakpoints[new][machine_name]' => backdrop_strtolower($name),
       'breakpoints[new][breakpoint]' => $mediaquery,
       'breakpoints[new][multipliers][1.5x]' => 0,
       'breakpoints[new][multipliers][2x]' => 0,

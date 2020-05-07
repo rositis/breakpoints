@@ -7,6 +7,12 @@
 
 /**
  * Admin form
+ *
+ * @param $form
+ * @param $form_state
+ * @param string $breakpoint_group_name
+ *
+ * @return array
  */
 function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_name = '') {
   $form = array();
@@ -31,7 +37,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
   $settings = breakpoints_settings();
   $multipliers = array();
   if (isset($settings->multipliers) && !empty($settings->multipliers)) {
-    $multipliers = drupal_map_assoc(array_values($settings->multipliers));
+    $multipliers = backdrop_map_assoc(array_values($settings->multipliers));
     if (array_key_exists('1x', $multipliers)) {
       unset($multipliers['1x']);
     }
@@ -73,7 +79,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
     );
   }
 
-  $form['#attached']['css'][] = drupal_get_path('module', 'breakpoints') . '/css/breakpoints.admin.css';
+  $form['#attached']['css'][] = backdrop_get_path('module', 'breakpoints') . '/css/breakpoints.admin.css';
   $form['breakpoints'] = array(
     '#type' => 'container',
     '#tree' => TRUE,
@@ -102,6 +108,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
   foreach ($breakpoints as $key => $breakpoint) {
     if ($breakpoint->source_type == BREAKPOINTS_SOURCE_TYPE_THEME) {
       $bp_group = breakpoints_breakpoint_group_load($breakpoint->source);
+      // TODO: Weird variable value
       if ($bp_group->overridden && variable_get('breakpoints_hide_overridden_breakpoints', 1) && $global) {
         continue;
       }
@@ -218,7 +225,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
             '#markup' => l(
               t('Duplicate group'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/duplicate',
               array(
-                'query' => drupal_get_destination(),
+                'query' => backdrop_get_destination(),
                 'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-duplicate-link')),
               )
             ),
@@ -240,7 +247,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
             '#markup' => l(
               t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit',
               array(
-                'query' => drupal_get_destination(),
+                'query' => backdrop_get_destination(),
                 'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-edit-link')),
               )
             ),
@@ -250,7 +257,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
             '#markup' => l(
               t('Duplicate group'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/duplicate',
               array(
-                'query' => drupal_get_destination(),
+                'query' => backdrop_get_destination(),
                 'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-duplicate-link')),
               )
             ),
@@ -268,7 +275,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
           '#markup' => l(
             t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit',
             array(
-              'query' => drupal_get_destination(),
+              'query' => backdrop_get_destination(),
               'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-edit-link')),
             )
           ),
@@ -278,7 +285,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
           '#markup' => l(
             t('Duplicate group'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/duplicate',
             array(
-              'query' => drupal_get_destination(),
+              'query' => backdrop_get_destination(),
               'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-duplicate-link')),
             )
           ),
@@ -295,7 +302,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
           '#markup' => l(
             t('Edit group breakpoints'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/edit',
             array(
-              'query' => drupal_get_destination(),
+              'query' => backdrop_get_destination(),
               'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-edit-link')),
             )
           ),
@@ -305,7 +312,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
           '#markup' => l(
             t('Duplicate group'), 'admin/config/media/breakpoints/groups/' . $breakpoint_group_name . '/duplicate',
             array(
-              'query' => drupal_get_destination(),
+              'query' => backdrop_get_destination(),
               'attributes' => array('class' => array('breakpoints-group-operations-link', 'breakpoints-group-operations-duplicate-link')),
             )
           ),
@@ -331,7 +338,7 @@ function breakpoints_admin_breakpoints($form, &$form_state, $breakpoint_group_na
  * Theme form as table.
  */
 function theme_breakpoints_admin_breakpoints_table($variables) {
-  drupal_add_css(drupal_get_path('module', 'breakpoints') . '/css/breakpoints.admin.css');
+  backdrop_add_css(backdrop_get_path('module', 'breakpoints') . '/css/breakpoints.admin.css');
   $form = $variables['form'];
   $global = empty($form['#group_name']);
   // Rows.
@@ -367,7 +374,7 @@ function theme_breakpoints_admin_breakpoints_table($variables) {
   $header[] = t('Weight');
 
   $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'resp-img-breakpoints')));
-  drupal_add_tabledrag('resp-img-breakpoints', 'order', 'sibling', 'breakpoints-weight');
+  backdrop_add_tabledrag('resp-img-breakpoints', 'order', 'sibling', 'breakpoints-weight');
   return $output;
 }
 
@@ -384,10 +391,10 @@ function _breakpoints_admin_breakpoints_table_row(&$element, $key, $global) {
   $breakpoint = $element['#breakpoint_data'];
   $element['weight']['#attributes']['class'] = array('breakpoints-weight');
 
-  $row[] = drupal_render($element['name']);
+  $row[] = backdrop_render($element['name']);
   $row[] = '';
-  $row[] = drupal_render($element['breakpoint']);
-  $row[] = drupal_render($element['multipliers']);
+  $row[] = backdrop_render($element['breakpoint']);
+  $row[] = backdrop_render($element['multipliers']);
   $row[] = $breakpoint->source . ' (' . $breakpoint->source_type . ')';
   $row[] = $breakpoint->status ? t('Enabled') : t('Disabled');
 
@@ -397,7 +404,7 @@ function _breakpoints_admin_breakpoints_table_row(&$element, $key, $global) {
     $row[] = l(t('Export'), 'admin/config/media/breakpoints/export/' . $key, $link_attributes);
   }
 
-  $row[] = drupal_render($element['weight']);
+  $row[] = backdrop_render($element['weight']);
   return $row;
 }
 
@@ -406,16 +413,16 @@ function _breakpoints_admin_breakpoints_table_row(&$element, $key, $global) {
  */
 function _breakpoints_admin_breakpoints_table_new_row(&$element) {
   $row = array();
-  $row[] = drupal_render($element['name']);
-  $row[] = drupal_render($element['machine_name']);
-  $row[] = drupal_render($element['breakpoint']);
-  $row[] = drupal_render($element['multipliers']);
+  $row[] = backdrop_render($element['name']);
+  $row[] = backdrop_render($element['machine_name']);
+  $row[] = backdrop_render($element['breakpoint']);
+  $row[] = backdrop_render($element['multipliers']);
   $row[] = '';
   $row[] = '';
   $row[] = '';
   $row[] = '';
   $row[] = '';
-  $row[] = drupal_render($element['weight']);
+  $row[] = backdrop_render($element['weight']);
   return $row;
 }
 
@@ -565,7 +572,7 @@ function breakpoints_admin_breakpoints_submit_exporttotheme($form, &$form_state)
  */
 function breakpoints_admin_breakpoint_actions_page($group_name, $action, $breakpoint) {
   if (in_array($action, array('enable', 'disable', 'delete', 'export'))) {
-    return drupal_get_form('breakpoints_admin_breakpoint_actions_form', $group_name, $action, $breakpoint);
+    return backdrop_get_form('breakpoints_admin_breakpoint_actions_form', $group_name, $action, $breakpoint);
   }
   return MENU_NOT_FOUND;
 }
@@ -594,7 +601,7 @@ function breakpoints_admin_breakpoint_actions_form($form, &$form_state, $group_n
       $form = confirm_form($form, $question, $path, '');
       break;
     case 'export':
-      $form = drupal_get_form('breakpoints_admin_breakpoint_export_form', $breakpoint);
+      $form = backdrop_get_form('breakpoints_admin_breakpoint_export_form', $breakpoint);
       break;
   }
   return $form;
@@ -624,6 +631,14 @@ function breakpoints_admin_breakpoint_actions_form_submit($form, &$form_state) {
   }
 }
 
+/**
+ * Add Style form.
+ *
+ * @param $form
+ * @param $form_state
+ *
+ * @return mixed
+ */
 function breakpoints_add_style_form($form, &$form_state) {
   module_load_include('inc', 'image', 'image.admin');
   $form['style'] = array(
@@ -654,7 +669,7 @@ function breakpoints_add_style_form($form, &$form_state) {
       '#title' => t('breakpoints'),
       '#type' => 'checkboxes',
       '#options' => $options,
-      '#default_value' => drupal_map_assoc(array_keys($options)),
+      '#default_value' => backdrop_map_assoc(array_keys($options)),
       '#description' => t('Select the breakpoints to create an image style for'),
       '#required' => TRUE,
     );
@@ -673,12 +688,12 @@ function breakpoints_add_style_form($form, &$form_state) {
 
 function breakpoints_add_style_form_validate($form, &$form_state) {
   foreach (array_filter($form_state['values']['breakpoints']) as $breakpoint) {
-    if (drupal_strlen($form_state['values']['base_name'] . $breakpoint) > 64) {
+    if (backdrop_strlen($form_state['values']['base_name'] . $breakpoint) > 64) {
       form_set_error(
         'breakpoints',
         t(
           'Could not generate image styles because the generated name @name is longer than the maximum allowed length of 64 characters for image style names (@length characters).',
-          array('@name' => $form_state['values']['base_name'] . $breakpoint, '@length' => drupal_strlen($form_state['values']['base_name'] . $breakpoint))
+          array('@name' => $form_state['values']['base_name'] . $breakpoint, '@length' => backdrop_strlen($form_state['values']['base_name'] . $breakpoint))
         )
       );
     }
@@ -708,7 +723,7 @@ function breakpoints_add_style_form_submit($form, &$form_state) {
     }
   }
   $form_state['redirect'] = 'admin/config/media/image-styles';
-  drupal_set_message(t('The new styles have been created'));
+  backdrop_set_message(t('The new styles have been created'));
 }
 
 function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $machine_name = '') {
@@ -752,7 +767,7 @@ function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $mach
     '#title' => 'Select the breakpoints you want to use in this group',
     '#type' => 'checkboxes',
     '#options' => $options,
-    '#default_value' => isset($group->breakpoints) ? drupal_map_assoc($group->breakpoints) : array(),
+    '#default_value' => isset($group->breakpoints) ? backdrop_map_assoc($group->breakpoints) : array(),
     '#required' => TRUE,
   );
 
@@ -771,7 +786,7 @@ function breakpoints_admin_breakpoint_group_edit_form($form, &$form_state, $mach
     $form['buttons']['deletelink'] = array(
       '#type' => 'markup',
       '#markup' => l(t('Delete this group'), 'admin/config/media/breakpoints/groups/' . $group->machine_name . '/delete', array(
-        'query' => drupal_get_destination(),
+        'query' => backdrop_get_destination(),
       )),
     );
   }
@@ -815,7 +830,7 @@ function breakpoints_admin_breakpoint_group_edit_form_submit($form, &$form_state
     breakpoints_breakpoint_group_save($new_group);
     menu_rebuild();
     $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $machine_name;
-    drupal_set_message(t('The new group have been created'));
+    backdrop_set_message(t('The new group have been created'));
   }
   else {
     $existing_group = breakpoints_breakpoint_group_load($machine_name);
@@ -955,11 +970,11 @@ function breakpoints_admin_breakpoint_group_import_form_submit($form, &$form_sta
     }
   }
   if (breakpoints_breakpoint_group_save($group)) {
-    drupal_set_message(t('Group %group saved.', array('%group' => $group->name)));
+    backdrop_set_message(t('Group %group saved.', array('%group' => $group->name)));
     $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $group->machine_name;
   }
   else {
-    drupal_set_message(t('Something went wrong, we could not save the group', 'error'));
+    backdrop_set_message(t('Something went wrong, we could not save the group', 'error'));
   }
 }
 
@@ -1025,11 +1040,11 @@ function breakpoints_admin_breakpoint_import_form_validate($form, &$form_state) 
 function breakpoints_admin_breakpoint_import_form_submit($form, &$form_state) {
   $breakpoint = $form_state['values']['import'];
   if (breakpoints_breakpoint_save($breakpoint)) {
-    drupal_set_message(t('Breakpoint %breakpoint saved.', array('%breakpoint' => $breakpoint->name)));
+    backdrop_set_message(t('Breakpoint %breakpoint saved.', array('%breakpoint' => $breakpoint->name)));
     $form_state['redirect'] = 'admin/config/media/breakpoints/';
   }
   else {
-    drupal_set_message(t('Something went wrong, we could not save the breakpoint'), 'error');
+    backdrop_set_message(t('Something went wrong, we could not save the breakpoint'), 'error');
   }
 }
 
@@ -1038,7 +1053,7 @@ function breakpoints_admin_breakpoint_import_form_submit($form, &$form_state) {
  */
 function breakpoints_multipliers_form($form, &$form_state) {
   $settings = breakpoints_settings();
-  $multipliers = drupal_map_assoc($settings->multipliers);
+  $multipliers = backdrop_map_assoc($settings->multipliers);
   if (isset($multipliers['1x'])) {
     unset($multipliers['1x']);
   }
@@ -1078,7 +1093,7 @@ function theme_breakpoints_multipliers_table_form($element) {
   $header = array(t('Label'), t('Operations'));
   foreach (element_children($form) as $multiplier) {
     $row = array();
-    $row[] = drupal_render($form[$multiplier]);
+    $row[] = backdrop_render($form[$multiplier]);
     $row[] = in_array($multiplier, array('new', '1x')) ? '' : l(t('Delete'), 'admin/config/media/breakpoints/multipliers/' . $multiplier . '/delete');
     $rows[] = $row;
   }
@@ -1107,7 +1122,7 @@ function breakpoints_multipliers_form_submit($form, &$form_state) {
   $multipliers = array_values(array_filter($form_state['values']['multipliers']));
   array_unshift($multipliers, '1x');
   breakpoints_settings_save($multipliers);
-  drupal_set_message(t('Multiplier settings are saved.'));
+  backdrop_set_message(t('Multiplier settings are saved.'));
 }
 
 function breakpoints_admin_multiplier_delete_form($form, &$form_state, $multiplier) {
@@ -1128,12 +1143,12 @@ function breakpoints_admin_multiplier_delete_form($form, &$form_state, $multipli
 function breakpoints_admin_multiplier_delete_form_submit($form, &$form_state) {
   $settings = breakpoints_settings();
   $multiplier = $form_state['values']['multiplier'];
-  $multipliers = drupal_map_assoc($settings->multipliers);
+  $multipliers = backdrop_map_assoc($settings->multipliers);
   if (isset($multipliers[$multiplier])) {
     unset($multipliers[$multiplier]);
   }
   breakpoints_settings_save(array_values($multipliers));
-  drupal_set_message(t('Multiplier %multiplier was deleted', array('%multiplier' => $multiplier)));
+  backdrop_set_message(t('Multiplier %multiplier was deleted', array('%multiplier' => $multiplier)));
   $form_state['redirect'] = 'admin/config/media/breakpoints/multipliers';
 }
 
@@ -1142,6 +1157,7 @@ function breakpoints_admin_settings_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#description' => t('When overriding breakpoints defined by a theme, hide them on the overview page'),
     '#title' => t('Hide overridden breakpoints'),
+    // TODO
     '#default_value' => variable_get('breakpoints_hide_overridden_breakpoints', 1),
   );
   return system_settings_form($form);
@@ -1156,7 +1172,7 @@ function breakpoints_admin_breakpoint_group_duplicate_form($form, &$form_state, 
   $src_group = breakpoints_breakpoint_group_load($breakpoint_group_name);
   $form_state['#src_group'] = $src_group;
 
-  $form['#attached']['css'][] = drupal_get_path('module', 'breakpoints') . '/css/breakpoints.admin.css';
+  $form['#attached']['css'][] = backdrop_get_path('module', 'breakpoints') . '/css/breakpoints.admin.css';
   $form['name'] = array(
     '#type' => 'textfield',
     '#size' => '64',
@@ -1220,6 +1236,6 @@ function breakpoints_admin_breakpoint_group_duplicate_form_submit($form, &$form_
     ctools_export_load_object_reset('breakpoint_group');
     menu_rebuild();
     $form_state['redirect'] = 'admin/config/media/breakpoints/groups/' . $machine_name;
-    drupal_set_message(t('The new group have been created'));
+    backdrop_set_message(t('The new group have been created'));
   }
 }
